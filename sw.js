@@ -18,28 +18,50 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ===== Web Push =====
+// الرقم على أيقونة التطبيق = عدد الإشعارات الظاهرة حاليًا (ما اتفتحتش لسه)
+async function mzUpdateBadge() {
+  try {
+    const list = await self.registration.getNotifications();
+    if (list.length > 0) {
+      if (self.navigator && self.navigator.setAppBadge) await self.navigator.setAppBadge(list.length);
+    } else if (self.navigator && self.navigator.clearAppBadge) {
+      await self.navigator.clearAppBadge();
+    }
+  } catch (_) {}
+}
+
 self.addEventListener('push', (event) => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; }
   catch (_) { d = { title: 'إشعار جديد', body: event.data ? event.data.text() : '' }; }
-  event.waitUntil(self.registration.showNotification(d.title || 'إشعار جديد', {
-    body: d.body || '',
-    icon: 'icon-192.png',
-    badge: 'icon-192.png',
-    tag: d.tag || undefined,
-    dir: 'rtl',
-    lang: 'ar',
-    data: { url: d.url || './' }
-  }));
+  event.waitUntil((async () => {
+    await self.registration.showNotification(d.title || 'إشعار جديد', {
+      body: d.body || '',
+      icon: 'icon-192.png',
+      badge: 'badge.png',
+      tag: d.tag || ('n-' + Date.now()),
+      renotify: true,
+      vibrate: [120, 60, 120],
+      timestamp: Date.now(),
+      dir: 'rtl',
+      lang: 'ar',
+      data: { url: d.url || './' }
+    });
+    await mzUpdateBadge();
+  })());
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || './';
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-      for (const c of list) { if ('focus' in c) return c.focus(); }
-      return self.clients.openWindow(url);
-    })
-  );
+  event.waitUntil((async () => {
+    await mzUpdateBadge();
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of list) { if ('focus' in c) return c.focus(); }
+    return self.clients.openWindow(url);
+  })());
+});
+
+self.addEventListener('notificationclose', (event) => {
+  event.waitUntil(mzUpdateBadge());
 });
