@@ -3481,7 +3481,7 @@ Reading books helps us learn new things. | قراءة الكتب تساعدنا 
               العناوين <b># أسئلة الكلمات</b> و <b># أسئلة الجرامر</b> بتتحط تلقائيًا لتقسيم الأسئلة عند التوليد — سيبها زي ما هي عشان العدّاد يعرف يفرّق بين النوعين.
             </div>
             <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-              <button type="button" class="btn-small" style="background:var(--teal);" onclick="regenerateWordQuestions()"><i class="fa-solid fa-wand-magic-sparkles"></i> ولّد 25 سؤال صعب</button>
+              <button type="button" class="btn-small" style="background:var(--teal);" onclick="regenerateWordQuestions()"><i class="fa-solid fa-wand-magic-sparkles"></i> ولّد أسئلة صعبة ⚡</button>
               <button type="button" class="btn-small" style="background:var(--gold-deep,#b8860b);" onclick="mzBulkReplaceEasy()"><i class="fa-solid fa-arrows-rotate"></i> بدّل كل الأسئلة السهلة بصعبة</button>
               <button type="button" class="btn-small" style="background:var(--purple);" onclick="toggleEditorSize('unifiedQuizEditorInput')"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> تكبير/تصغير المحرر</button>
             </div>
@@ -14349,14 +14349,14 @@ function escapeRegExpLiteral(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 ============================================================ */
 const MZ_HARD_BATCH = 25;          // كلمات في الدفعة الواحدة = 25 سؤال صعب في كل توليد (50 كانت بتتقطع عند حد الدالة 100 ثانية)
 const MZ_HARD_MIN_Q = 25;          // أقل عدد أسئلة في التوليد الواحد (لو الوحدة كلماتها أقل، بنعمل سؤالين لبعض الكلمات)
-const MZ_HARD_MAX_WORDS = 25;      // أقصى عدد أسئلة صعبة في التوليد الواحد = 25 (نداء واحد للمساعد = سريع ومش بيتقطع)
+const MZ_HARD_MAX_WORDS = 50;      // أقصى عدد أسئلة صعبة في التوليد الواحد = 25 (نداء واحد للمساعد = سريع ومش بيتقطع)
 const MZ_HARD_CALL_TIMEOUT_MS = 120000;
 const MZ_HARD_PARALLEL = 3;        // عدد النداءات المتوازية للتوليد (الـ 25 سؤال بيتقسموا عليها) — أسرع بكتير من نداء واحد كبير
 const MZ_HARD_VERIFY = false;      // نداء تحقق إضافي (بيضيف ~دقيقة) — مقفول للسرعة، والأسئلة بتتراجع في المحرر قبل الحفظ
 const MZ_HARD_COMPENSATE = false;  // نداء تعويض للكلمات الناقصة (بيضيف نداء كامل) — مقفول للسرعة
 let _hardGenBusy = false;
 
-const MZ_EASY_Q_RE = [/^what does .* mean/i, /^أي كلمة إنجليزية معناها/, /^في الجملة:.*معناها/, /^complete the sentence:/i];
+const MZ_EASY_Q_RE = [/^what does [^«]* mean/i, /^أي كلمة إنجليزية معناها/, /^في الجملة:.*معناها/, /^complete the sentence:/i];
 function mzIsEasyTemplateQ(text){ const t = String(text || '').trim(); return MZ_EASY_Q_RE.some(re => re.test(t)); }
 
 function mzGenFrame(title){
@@ -14458,8 +14458,262 @@ async function mzHardAiCall(text, unitTitle, stageLabel){
   catch(e){ try{ br.bump(); }catch(_){} throw e; }
 }
 
-/* بيولّد سؤال صعب لكل كلمة. بيرجّع { items, covered, total, stopped, unverified, error } */
-async function mzHardGenerate({ words, unitTitle, stageLabel, frame, maxWords }){
+/* ============================================================
+   المولّد المحلي الفوري — من غير أي AI ولا إنترنت (أقل من ثانية)
+   الأنواع: كمّلي الفراغ (من جمل الأمثلة) • مواقف حياتية (بنك جاهز) • تصنيف (Which is a person / NOT a part of the body)
+            • إملاء (كتابة صح / أيهم غلط / حرف ناقص / رتّبي الحروف) • What does X mean
+   ============================================================ */
+const MZ_HARD_USE_AI = false;   // true = يرجع للمساعد الذكي (بطيء)، false = المولّد المحلي الفوري
+const MZ_GENERIC_DISTRACTORS = ['table','happy','window','because','travel','simple','under','quickly','garden','teacher','between','strong'];
+
+/* تصنيفات جاهزة (زي أسئلة: Which of these is a person / a feeling / NOT a part of the body) */
+const MZ_CATS = {
+  body:    { is: 'a part of the body', words: 'forehead,collarbone,chest,shoulder,elbow,knee,ankle,wrist,throat,stomach,heart,lung,skin,spine,rib,thumb,neck,back,hip,brain,tongue,cheek,chin,eyebrow,eyelid,palm,heel,waist,knuckle,thigh,calf,jaw,nose,ear,eye,arm,leg,hand,foot,finger,toe,tooth,hair,head,face,mouth,lip,bone,muscle' },
+  person:  { is: 'a person', words: 'technician,nurse,doctor,patient,dentist,surgeon,pharmacist,receptionist,paramedic,teacher,farmer,pilot,engineer,driver,cashier,chef,firefighter,policeman,student,scientist,mechanic,plumber,baker,librarian,tourist,customer,passenger,neighbour,visitor,guest,manager,judge,artist,player,athlete,coach' },
+  feeling: { is: 'a feeling', words: 'relief,anger,fear,joy,sadness,worry,pride,excitement,boredom,loneliness,surprise,jealousy,happiness,shame,hope,love,courage,curiosity,disappointment,nervous,worried,anxious,proud,excited,bored,lonely,jealous,ashamed,afraid,relieved,upset,angry,happy,sad,scared,confident,embarrassed' },
+  place:   { is: 'a place', words: 'hospital,pharmacy,clinic,library,airport,school,bakery,stadium,cinema,museum,bank,market,station,park,garage,factory,farm,kitchen,bedroom,playground,restaurant,supermarket,theatre,beach,village,harbour,office' },
+  tool:    { is: 'something doctors use', words: 'stethoscope,thermometer,bandage,syringe,crutches,wheelchair,stretcher,mask,gloves,plaster,scalpel,equipment,prescription' }
+};
+const MZ_CAT_OF = {};
+Object.keys(MZ_CATS).forEach(c => { MZ_CATS[c].list = MZ_CATS[c].words.split(','); MZ_CATS[c].list.forEach(x => { if(!MZ_CAT_OF[x]) MZ_CAT_OF[x] = c; }); });
+
+/* مواقف حياتية: [المجال، كلمات مفتاحية، الجملة، الصح، غلط، غلط، غلط] — بتظهر لما الوحدة فيها الكلمة المفتاحية (أو الوحدة طبية) */
+const MZ_SIT = [
+  ['med','nurse,pulse,patient',"The nurse --- the patient's pulse every hour.",'checked','painted','cooked','sold'],
+  ['med','nurse,patient,blanket',"The nurse --- the shivering patient a warm blanket.",'gave','painted','cooked','washed'],
+  ['med','doctor,patient,examine',"The doctor --- the patient carefully before writing the prescription.",'examined','invited','painted','cooked'],
+  ['med','doctor,prescription,medicine',"The doctor --- a prescription for the sick boy.",'wrote','ate','drove','cleaned'],
+  ['med','patient,doctor,pain',"The patient --- the doctor that his back was hurting.",'told','opened','cooked','painted'],
+  ['med','wound,bandage,nurse',"The nurse --- the wound with clean water and covered it.",'cleaned','cooked','painted','sold'],
+  ['med','bandage,hand,wound',"She --- a bandage around his injured hand.",'wrapped','ate','sang','drove'],
+  ['med','temperature,thermometer,fever',"The nurse --- the child's temperature with a thermometer.",'measured','painted','sold','cooked'],
+  ['med','injection,needle,vaccine',"The boy closed his eyes when the nurse --- him the injection.",'gave','cooked','painted','washed'],
+  ['med','ambulance,accident,emergency',"After the accident, someone --- an ambulance immediately.",'called','cooked','painted','planted'],
+  ['med','patient,operation,surgery,hospital',"The patient --- in bed for two days after the operation.",'rested','danced','sang','ran'],
+  ['med','recover,flu,fever',"It took him a week to --- from the flu.",'recover','travel','listen','borrow'],
+  ['med','pharmacist,pharmacy,medicine',"The pharmacist --- me the medicine and explained how to use it.",'gave','painted','planted','sang'],
+  ['med','stethoscope,chest,heart',"The doctor put the --- on my chest and asked me to breathe deeply.",'stethoscope','sandwich','umbrella','calculator'],
+  ['med','stethoscope,heart',"Doctors use a --- to listen to your heart.",'stethoscope','ruler','camera','calculator'],
+  ['med','prescription,medicine',"The doctor wrote me a --- so I could buy the medicine.",'prescription','postcard','passport','birthday'],
+  ['med','pulse,heart',"You can feel your --- by putting two fingers on your wrist.",'pulse','shoe','pencil','ticket'],
+  ['med','forehead,fever,temperature',"Mum put her hand on my --- to see if I had a fever.",'forehead','knee','elbow','ankle'],
+  ['med','collarbone,bike,broke',"He fell off his bike and broke his ---.",'collarbone','song','holiday','birthday'],
+  ['med','chest,breathe,cough',"The doctor tapped on his --- and listened to his breathing.",'chest','knee','elbow','ankle'],
+  ['med','equipment,hospital',"The new hospital has modern medical --- in every room.",'equipment','stories','holidays','recipes'],
+  ['med','relief,test,result',"She felt great --- when the doctor said the results were normal.",'relief','hunger','anger','boredom'],
+  ['med','technician,lab,blood',"The lab --- took a sample of my blood for the test.",'technician','farmer','pilot','cashier'],
+  ['med','cough,throat,cold',"He has a bad --- and a sore throat.",'cough','picnic','puzzle','carpet'],
+  ['med','headache,pill,pain',"I took a pill because I had a terrible ---.",'headache','window','pencil','kitchen'],
+  ['med','symptoms,cold,flu',"A runny nose and a cough are common --- of a cold.",'symptoms','colours','hobbies','jobs'],
+  ['med','allergy,peanut,sneeze',"He can't eat peanuts because he has an ---.",'allergy','island','exam','orange'],
+  ['med','vaccine,disease',"Children get a --- to protect them from serious diseases.",'vaccine','toy','sweet','picture'],
+  ['med','dentist,tooth,toothache',"My tooth hurts, so I'm going to the ---.",'dentist','baker','pilot','farmer'],
+  ['med','crutches,leg,broke',"He broke his leg, so he walks with ---.",'crutches','pencils','spoons','tickets'],
+  ['med','cast,arm,broken',"The doctor put a plaster --- on his broken arm.",'cast','pillow','towel','menu'],
+  ['med','thermometer,temperature',"The nurse used a --- to check my temperature.",'thermometer','ruler','camera','spoon'],
+  ['med','emergency,ambulance',"The ambulance rushed him to the --- department.",'emergency','fashion','music','cooking'],
+  ['med','blood,sample,technician',"The technician took a sample of my --- for the test.",'blood','paint','juice','sand'],
+  ['med','bone,x-ray,broken',"The X-ray showed that the --- was broken.",'bone','cup','pencil','window'],
+  ['med','stomach,ate,hurts',"I ate too much, so my --- hurts.",'stomach','shoes','bag','pencil'],
+  ['med','pain,gain',"No ---, no gain.",'pain','rain','song','wind'],
+  ['med','pharmacy,medicine,prescription',"I took the prescription to the --- to get my medicine.",'pharmacy','bakery','library','cinema'],
+  ['med','hospital,visit,friend',"She visited her sick friend in the --- and brought her flowers.",'hospital','bakery','garage','factory'],
+  ['med','appointment,doctor',"I booked a doctor's --- for Monday morning.",'appointment','pencil','cheese','island'],
+  ['med','surgery,surgeon,operation',"The surgeon performed the --- for three hours.",'surgery','holiday','picnic','homework'],
+  ['med','fever,temperature',"She stayed home because she had a high ---.",'fever','window','sandwich','pencil'],
+  ['med','rain,raining,cats,dogs',"We couldn't go out because it was raining cats and dogs. This means it was --- raining.",'heavily','softly','at night','a little'],
+  ['med','wheelchair,walk,leg',"He can't walk, so he uses a ---.",'wheelchair','umbrella','ladder','camera'],
+  ['med','mask,virus,germs',"Doctors wear a --- to stop germs spreading.",'mask','ruler','pillow','spoon'],
+  ['life','umbrella,rain',"It was raining, so she opened her ---.",'umbrella','sandwich','pillow','guitar'],
+  ['life','library,book,borrow',"We borrow books from the school ---.",'library','bakery','garage','stadium'],
+  ['life','airport,flight,plane',"We arrived at the --- two hours before the flight.",'airport','bakery','library','farm'],
+  ['life','passport,airport,travel',"You must show your --- at the airport.",'passport','pencil','ladder','sandwich'],
+  ['life','ticket,match,cinema',"He bought a --- to see the football match.",'ticket','pillow','window','sandwich'],
+  ['life','recipe,cake,bake',"My mum followed the --- to bake a cake.",'recipe','passport','ticket','helmet'],
+  ['life','helmet,bike,ride',"Always wear a --- when you ride a bike.",'helmet','spoon','dress','sandwich'],
+  ['life','cashier,pay,shop',"The --- gave me the receipt after I paid.",'cashier','pilot','farmer','judge'],
+  ['life','breakfast',"I always --- breakfast before I go to school.",'have','drive','throw','climb'],
+  ['life','guests,tidy,clean',"Before the guests arrived, we --- the living room.",'tidied','drank','sang','slept'],
+  ['life','alarm,wake,morning',"My --- rang at six o'clock, so I woke up.",'alarm','pencil','window','carpet']
+];
+const MZ_SIT_BY_KEY = {};
+MZ_SIT.forEach((e, i) => e[1].split(',').forEach(k => { k = k.trim(); (MZ_SIT_BY_KEY[k] = MZ_SIT_BY_KEY[k] || []).push(i); }));
+
+function mzClean(w){ return String(w || '').replace(/\([^)]*\)/g, '').split('/')[0].replace(/\s+/g, ' ').trim(); }
+function mzPickDistractors(correct, pool){
+  const c = correct.toLowerCase(), seen = new Set([c]), cands = [];
+  pool.forEach(p => { const k = p.toLowerCase(); if(!k || seen.has(k)) return; seen.add(k); cands.push(p); });
+  const cw = correct.split(' ').length;
+  const scored = cands.map(p => {
+    let sc = 0;
+    if(p.split(' ').length === cw) sc += 3;
+    sc -= Math.abs(p.length - correct.length) * 0.5;
+    if(p[0].toLowerCase() === c[0]) sc += 1.5;
+    return { p, sc: sc + Math.random() * 2 };
+  }).sort((a, b) => b.sc - a.sc);
+  let top = shuffleArray(scored.slice(0, 7).map(x => x.p)).slice(0, 3);
+  if(top.length < 3) shuffleArray(MZ_GENERIC_DISTRACTORS.slice()).forEach(g => { if(top.length < 3 && !seen.has(g) && !top.includes(g)) top.push(g); });
+  return top;
+}
+function mzBlankQuestion(w, pool){
+  const word = mzClean(w.word_en), ex = String(w.example_en || '').trim();
+  if(!word || !ex) return null;
+  const re = new RegExp('(^|[^A-Za-z])(' + escapeRegExpLiteral(word) + ')(s|es)?(?![A-Za-z])', 'i');
+  const m = ex.match(re);
+  if(!m || ex.split(/\s+/).length < 3) return null;
+  const suffix = m[3] || '';
+  const q = ex.replace(re, (all, pre) => pre + '---');
+  return { q, choices: [word + suffix].concat(mzPickDistractors(word, pool).map(d => d + suffix)), correct: 0, wid: w.id };
+}
+/* What does «forehead» mean? (اختيارات عربي)  أو  What does «جبهة» mean? (اختيارات إنجليزي) */
+function mzMeaningQuestion(w, pool, arPool){
+  const word = mzClean(w.word_en), ar = String(w.word_ar || '').trim();
+  if(!word || !ar) return null;
+  if(Math.random() < 0.5){
+    const others = shuffleArray(arPool.filter(a => a !== ar)).slice(0, 3);
+    if(others.length === 3) return { q: 'What does «' + word + '» mean?', choices: [ar].concat(others), correct: 0, wid: w.id };
+  }
+  return { q: 'What does «' + ar + '» mean?', choices: [word].concat(mzPickDistractors(word, pool)), correct: 0, wid: w.id };
+}
+/* أخطاء إملائية مؤلَّفة: قلب حرفين / حرف علة غلط / حرف زيادة أو ناقص */
+function mzMisspellings(word){
+  const w = word.toLowerCase(), out = new Set(), V = 'aeiou';
+  for(let i = 1; i < w.length - 2; i++){ if(w[i] !== w[i + 1]) out.add(w.slice(0, i) + w[i + 1] + w[i] + w.slice(i + 2)); }
+  for(let i = 1; i < w.length - 1; i++){ if(V.includes(w[i])) V.split('').forEach(v => { if(v !== w[i]) out.add(w.slice(0, i) + v + w.slice(i + 1)); }); }
+  for(let i = 1; i < w.length - 1; i++){
+    if(w[i] === w[i + 1]) out.add(w.slice(0, i) + w.slice(i + 1));
+    else if('bcdfgklmnprstz'.includes(w[i])) out.add(w.slice(0, i + 1) + w[i] + w.slice(i + 1));
+  }
+  for(let i = 1; i < w.length - 1; i++) out.add(w.slice(0, i) + w.slice(i + 1));
+  out.delete(w);
+  return [...out];
+}
+const mzCapFix = (word, x) => (word[0] !== word[0].toLowerCase()) ? x[0].toUpperCase() + x.slice(1) : x;
+function mzSpellingQuestion(w){
+  const word = mzClean(w.word_en), ar = String(w.word_ar || '').trim();
+  if(!word || !/^[A-Za-z]{5,}$/.test(word)) return null;
+  const wrong = shuffleArray(mzMisspellings(word)).slice(0, 3).map(x => mzCapFix(word, x));
+  if(wrong.length < 3) return null;
+  return { q: ar ? 'What is the correct spelling of «' + ar + '»?' : 'Which word is spelled correctly?', choices: [word].concat(wrong), correct: 0, wid: w.id };
+}
+function mzMisspelledQuestion(w, pool){
+  const word = mzClean(w.word_en);
+  if(!/^[A-Za-z]{5,}$/.test(word)) return null;
+  const bad = shuffleArray(mzMisspellings(word))[0];
+  const singles = pool.filter(p => /^[A-Za-z]{4,}$/.test(p) && p.toLowerCase() !== word.toLowerCase());
+  if(!bad || singles.length < 3) return null;
+  return { q: 'Which word is spelled INCORRECTLY?', choices: [mzCapFix(word, bad)].concat(shuffleArray(singles).slice(0, 3)), correct: 0, wid: w.id };
+}
+function mzMissingLetterQuestion(w){
+  const word = mzClean(w.word_en), ar = String(w.word_ar || '').trim();
+  if(!ar || !/^[A-Za-z]{4,}$/.test(word)) return null;   // لازم ترجمة عربي عشان السؤال يبقى له إجابة واحدة
+  const lw = word.toLowerCase(), idx = [];
+  for(let i = 1; i < lw.length - 1; i++) if('aeiou'.includes(lw[i])) idx.push(i);
+  if(!idx.length) return null;
+  const i = idx[Math.floor(Math.random() * idx.length)];
+  const others = shuffleArray('aeiou'.split('').filter(v => v !== lw[i])).slice(0, 3);
+  return { q: 'Complete the word: ' + word.slice(0, i) + '_' + word.slice(i + 1) + '  —  ' + ar, choices: [lw[i]].concat(others), correct: 0, wid: w.id };
+}
+function mzUnscrambleQuestion(w, pool){
+  const word = mzClean(w.word_en);
+  if(!/^[A-Za-z]{5,12}$/.test(word)) return null;
+  const lw = word.toLowerCase(); let sc = lw;
+  for(let t = 0; t < 12 && sc === lw; t++) sc = shuffleArray(lw.split('')).join('');
+  if(sc === lw) return null;
+  return { q: 'Unscramble the letters: ' + sc.split('').join(' - '), choices: [word].concat(mzPickDistractors(word, pool)), correct: 0, wid: w.id };
+}
+/* Which of these is a person / a feeling ... ؟ */
+function mzCategoryQuestion(w, pool){
+  const word = mzClean(w.word_en), c = MZ_CAT_OF[word.toLowerCase()];
+  if(!c) return null;
+  const wrong = shuffleArray(pool.filter(p => { const k = MZ_CAT_OF[p.toLowerCase()]; return k && k !== c; })).slice(0, 2);
+  const globalOther = [];
+  Object.keys(MZ_CATS).forEach(k => { if(k !== c) MZ_CATS[k].list.forEach(x => { if(x !== word.toLowerCase()) globalOther.push(x); }); });
+  let guard = 0;
+  while(wrong.length < 3 && guard++ < 200){ const x = globalOther[Math.floor(Math.random() * globalOther.length)]; if(x && !wrong.some(y => y.toLowerCase() === x)) wrong.push(x); }
+  if(wrong.length < 3) return null;
+  return { q: 'Which of these is ' + MZ_CATS[c].is + '?', choices: [word].concat(wrong), correct: 0, wid: w.id };
+}
+/* Which of these is NOT a part of the body / a person / a feeling / a place ؟ */
+function mzNotCategoryQuestion(w){
+  const word = mzClean(w.word_en), c = MZ_CAT_OF[word.toLowerCase()];
+  if(!c) return null;
+  const opts = ['body', 'person', 'feeling', 'place'].filter(k => k !== c);
+  const C = opts[Math.floor(Math.random() * opts.length)];
+  const wrong = shuffleArray(MZ_CATS[C].list.filter(x => x !== word.toLowerCase())).slice(0, 3);
+  if(wrong.length < 3) return null;
+  return { q: 'Which of these is NOT ' + MZ_CATS[C].is + '?', choices: [word].concat(wrong), correct: 0, wid: w.id };
+}
+
+async function mzHardGenerateLocal({ words, frame, maxWords }){
+  const out = { items: [], covered: 0, total: 0, stopped: '', unverified: false, error: '' };
+  const list = shuffleArray(words.slice()).slice(0, maxWords || MZ_HARD_MAX_WORDS);
+  out.total = list.length;
+  const pool = [...new Set(words.map(w => mzClean(w.word_en)).filter(Boolean))];
+  const arPool = [...new Set(words.map(w => String(w.word_ar || '').trim()).filter(a => a && a.indexOf('|') < 0 && a[0] !== '*'))];
+  const seenQ = new Set(), covered = new Set(), usedSit = new Set();
+  const cnt = { blank: 0, situation: 0, category: 0, notcat: 0, spell: 0, misspelled: 0, letter: 0, unscramble: 0, meaning: 0 };
+  const add = (it, kind) => {
+    if(!it) return false;
+    const k = it.q.toLowerCase() + '|' + it.choices[0].toLowerCase();
+    if(seenQ.has(k)) return false;
+    seenQ.add(k); out.items.push(it); if(it.wid != null) covered.add(it.wid); cnt[kind]++;
+    return true;
+  };
+  const makers = {
+    blank:      w => mzBlankQuestion(w, pool),
+    situation:  w => {
+      const idxs = (MZ_SIT_BY_KEY[mzClean(w.word_en).toLowerCase()] || []).filter(i => !usedSit.has(i));
+      if(!idxs.length) return null;
+      const i = idxs[Math.floor(Math.random() * idxs.length)]; usedSit.add(i);
+      const e = MZ_SIT[i];
+      return { q: e[2], choices: [e[3], e[4], e[5], e[6]], correct: 0, wid: w.id };
+    },
+    category:   w => mzCategoryQuestion(w, pool),
+    notcat:     w => mzNotCategoryQuestion(w),
+    spell:      w => mzSpellingQuestion(w),
+    misspelled: w => mzMisspelledQuestion(w, pool),
+    letter:     w => mzMissingLetterQuestion(w),
+    unscramble: w => mzUnscrambleQuestion(w, pool),
+    meaning:    w => mzMeaningQuestion(w, pool, arPool)
+  };
+  // أوزان الأنواع (الإملاء بكل أنواعه حوالي نص الأسئلة) — الترتيب بيتغيّر عشوائي لكل كلمة
+  const WEIGHTS = { blank: 3, situation: 3, spell: 3, category: 1.5, notcat: 1.5, misspelled: 1.5, letter: 1.5, unscramble: 1.5, meaning: 1.5 };
+  const order = () => {
+    const rest = Object.keys(WEIGHTS), res = [];
+    while(rest.length){
+      let r = Math.random() * rest.reduce((t, k) => t + WEIGHTS[k], 0), i = 0;
+      for(; i < rest.length - 1; i++){ r -= WEIGHTS[rest[i]]; if(r <= 0) break; }
+      res.push(rest.splice(i, 1)[0]);
+    }
+    return res;
+  };
+  list.forEach(w => { for(const k of order()){ if(add(makers[k](w), k)) break; } });
+  // مواقف حياتية إضافية لو الوحدة طبية (صحة/جسم/مستشفى) — «الدكتور/الممرضة عملوا إيه للمريض»
+  const medSet = new Set();
+  MZ_SIT.forEach(e => { if(e[0] === 'med') e[1].split(',').forEach(k => { if(k.trim().length >= 5) medSet.add(k.trim()); }); });
+  ['body', 'tool'].forEach(c => MZ_CATS[c].list.forEach(x => { if(x.length >= 5) medSet.add(x); }));
+  ['nurse', 'doctor', 'patient', 'dentist', 'surgeon', 'pharmacist', 'technician'].forEach(x => medSet.add(x));
+  if(pool.filter(p => medSet.has(p.toLowerCase())).length >= 2){
+    const rest = MZ_SIT.map((e, i) => i).filter(i => MZ_SIT[i][0] === 'med' && !usedSit.has(i));
+    shuffleArray(rest).slice(0, 6).forEach(i => { usedSit.add(i); const e = MZ_SIT[i]; add({ q: e[2], choices: [e[3], e[4], e[5], e[6]], correct: 0, wid: null }, 'situation'); });
+  }
+  // لو الوحدة كلماتها قليلة: نكمّل بنوع تاني لنفس الكلمات لحد الحد الأدنى
+  for(let pass = 0; pass < 4 && out.items.length < MZ_HARD_MIN_Q; pass++){
+    for(const w of list){ if(out.items.length >= MZ_HARD_MIN_Q) break; for(const k of order()){ if(add(makers[k](w), k)) break; } }
+  }
+  out.covered = covered.size;
+  if(frame){
+    frame.progress(list.length, list.length, covered.size + ' / ' + list.length + ' كلمة');
+    frame.log('⚡ فراغ ' + cnt.blank + ' • مواقف ' + cnt.situation + ' • تصنيف ' + (cnt.category + cnt.notcat) + ' • إملاء ' + (cnt.spell + cnt.misspelled + cnt.letter + cnt.unscramble) + ' • معنى ' + cnt.meaning);
+  }
+  if(!out.items.length) out.error = 'الكلمات مفيهاش ترجمة عربي ولا جمل أمثلة أبني منها أسئلة';
+  return out;
+}
+async function mzHardGenerate(args){ return MZ_HARD_USE_AI ? mzHardGenerateAI(args) : mzHardGenerateLocal(args); }
+
+/* (قديم — بالمساعد الذكي) بيولّد سؤال صعب لكل كلمة. بيرجّع { items, covered, total, stopped, unverified, error } */
+async function mzHardGenerateAI({ words, unitTitle, stageLabel, frame, maxWords }){
   const out = { items: [], covered: 0, total: 0, stopped: '', unverified: false, error: '' };
   const br = window.mzaiBridge;
   if(!br || typeof adminToken === 'undefined' || !adminToken){ out.error = 'المساعد الذكي مش متاح دلوقتي (اتأكد إنك داخل بحساب الإدارة وإن المساعد شغال)'; return out; }
@@ -14570,7 +14824,7 @@ async function ensureQuizQuestions(unitId){
   const unitTitle = (u && u.title) || ('Unit ' + ((u && u.unit_number) || ''));
   const stageLabel = ((typeof STAGES !== 'undefined' ? STAGES : []).find(s => s.key === (u && u.stage_key)) || {}).label || (u && u.stage_key) || '';
   const frame = mzGenFrame('توليد أسئلة صعبة — ' + unitTitle);
-  frame.status('الوحدة مفيهاش أسئلة — بولّد أسئلة صعبة (' + MZ_HARD_BATCH + ' سؤال بالتوازي) قبل ما أفتح الاختبار…');
+  frame.status('الوحدة مفيهاش أسئلة — بجهّز أسئلة صعبة من كلمات الوحدة قبل ما أفتح الاختبار…');
   let r;
   try{ r = await mzHardGenerate({ words, unitTitle, stageLabel, frame }); }
   catch(e){ console.error(e); r = { items: [], covered: 0, total: 0, error: (e && e.message) || 'خطأ غير متوقع' }; }
@@ -14598,7 +14852,7 @@ async function regenerateWordQuestions(){
   const unitTitle = unit.title || ('Unit ' + (unit.unit_number || ''));
   _hardGenBusy = true;
   const frame = mzGenFrame('توليد أسئلة صعبة — ' + unitTitle);
-  frame.status('بولّد أسئلة صعبة — ' + MZ_HARD_MAX_WORDS + ' سؤال بالتوازي (' + Math.min(words.length, MZ_HARD_MAX_WORDS) + ' كلمة)…');
+  frame.status('بجهّز أسئلة صعبة من ' + Math.min(words.length, MZ_HARD_MAX_WORDS) + ' كلمة…');
   try{
     const r = await mzHardGenerate({ words, unitTitle, stageLabel, frame });
     if(!r.items.length){ frame.finish(false, 'ما اتولّدش أي سؤال — ' + (r.error || 'جرّب تاني')); return; }
