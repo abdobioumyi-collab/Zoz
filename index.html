@@ -3481,11 +3481,12 @@ Reading books helps us learn new things. | قراءة الكتب تساعدنا 
               العناوين <b># أسئلة الكلمات</b> و <b># أسئلة الجرامر</b> بتتحط تلقائيًا لتقسيم الأسئلة عند التوليد — سيبها زي ما هي عشان العدّاد يعرف يفرّق بين النوعين.
             </div>
             <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-              <button type="button" class="btn-small" style="background:var(--teal);" onclick="regenerateWordQuestions()"><i class="fa-solid fa-wand-magic-sparkles"></i> ولّد أسئلة كلمات صعبة من مفردات الوحدة</button>
+              <button type="button" class="btn-small" style="background:var(--teal);" onclick="regenerateWordQuestions()"><i class="fa-solid fa-wand-magic-sparkles"></i> ولّد أسئلة صعبة (50 في الدفعة)</button>
+              <button type="button" class="btn-small" style="background:var(--gold-deep,#b8860b);" onclick="mzBulkReplaceEasy()"><i class="fa-solid fa-arrows-rotate"></i> بدّل كل الأسئلة السهلة بصعبة</button>
               <button type="button" class="btn-small" style="background:var(--purple);" onclick="toggleEditorSize('unifiedQuizEditorInput')"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> تكبير/تصغير المحرر</button>
             </div>
             <textarea class="field-textarea" id="unifiedQuizEditorInput" placeholder="# أسئلة الكلمات
-What does 'apple' mean? | *تفاحة | موزة | برتقالة | عنب
+She is interested --- music. | *in | on | at | for
 
 # أسئلة الجرامر
 He --- playing football. | *is | are | am | be"></textarea>
@@ -8739,7 +8740,7 @@ function mzMonthFrame(sub, withTotal){
   const tot = n('total');
   const src = [
     ['📝','اختبارات الوحدات', n('quiz'), ''],
-    ['🎓','الشهادات', n('certs'), n('certs_n') ? ` (${n('certs_n')})` : ''],
+    ['🎓','شهادات صائد الكلمات', n('certs'), n('certs_n') ? ` (${n('certs_n')})` : ''],
     ['📅','الحضور', n('attendance'), ` (${n('days')} يوم × ${n('per_day')})`],
     ['🎯','لعبة صائد الكلمات', n('game'), ''],
   ];
@@ -8785,13 +8786,14 @@ function openMyProgress(){
     <div class="db-body" style="margin-top:6px;">
       ${mzMonthFrame()}
       <div class="mz-tot-t">نقاطك الكلية جاية منين؟</div>
-      <div class="detail-row"><span>📝 من الاختبارات</span><span>${mzPoints.points_quiz}</span></div>
-      <div class="detail-row"><span>🎓 من الشهادات</span><span>${mzPoints.points_cert}</span></div>
-      <div class="detail-row"><span>📅 من أيام الحضور (${mzPoints.attendance_days} يوم)</span><span>${mzPoints.points_attendance}</span></div>
-      <div class="detail-row"><span>⏱️ من وقت المذاكرة (${mzPoints.study_minutes} دقيقة)</span><span>${mzPoints.points_time}</span></div>
-      <div class="detail-row"><span>🎯 من صائد الكلمات (${mzPoints.game_units} وحدة)</span><span>${mzPoints.points_game}</span></div>
+      <div class="detail-row"><span>📝 من اختبارات الوحدات<small style="display:block;font-size:.68rem;font-weight:700;color:var(--ink-soft);line-height:1.6;margin-top:2px;">بنحسب أعلى درجة ليك في كل وحدة (من 20) — مهما كررت الاختبار</small></span><span>${mzPoints.points_quiz}</span></div>
+      <div class="detail-row"><span>🎓 من شهادات «صائد الكلمات»<small style="display:block;font-size:.68rem;font-weight:700;color:var(--ink-soft);line-height:1.6;margin-top:2px;">بتاخدها لما تحفظ كلمات الوحدة في لعبة صائد الكلمات. شهادة الاختبار حاجة تانية: بتتحمل بعد الامتحان بأعلى درجة وليها رقم واحد، ومش بتتحسب هنا</small></span><span>${mzPoints.points_cert}</span></div>
+      <div class="detail-row"><span>📅 من أيام الحضور (${mzPoints.attendance_days} يوم)<small style="display:block;font-size:.68rem;font-weight:700;color:var(--ink-soft);line-height:1.6;margin-top:2px;">نقاط عن كل يوم فتحت فيه المنصة</small></span><span>${mzPoints.points_attendance}</span></div>
+      <div class="detail-row"><span>⏱️ من وقت المذاكرة (${mzPoints.study_minutes} دقيقة)<small style="display:block;font-size:.68rem;font-weight:700;color:var(--ink-soft);line-height:1.6;margin-top:2px;">نقاط على الوقت اللي قضيته بتذاكر جوه المنصة</small></span><span>${mzPoints.points_time}</span></div>
+      <div class="detail-row"><span>🎯 من لعبة صائد الكلمات (${mzPoints.game_units} وحدة)<small style="display:block;font-size:.68rem;font-weight:700;color:var(--ink-soft);line-height:1.6;margin-top:2px;">نقاط على نتيجتك وأنت بتلعب اللعبة</small></span><span>${mzPoints.points_game}</span></div>
       <div class="detail-row"><span>🔥 تحدي الأيام (سلسلتك الحالية ${mzPoints.streak_days} يوم • أطول سلسلة ${mzPoints.best_streak})</span><span>${mzPoints.points_streak}</span></div>
       <div class="detail-row"><span>🎧 من السماع (${mzPoints.listen_words} كلمة مختلفة — كل 50 = 5 نقاط)</span><span>${mzPoints.points_listen}</span></div>
+      <div class="field-hint" style="margin:10px 4px 0;line-height:1.8;">ℹ️ <b>مهم:</b> الاختبار ليه درجة واحدة بس لكل وحدة وهي <b>أعلى محاولة</b>، وشهادته واحدة بنفس الرقم حتى لو امتحنت أكتر من مرة. الصفر في «شهادات صائد الكلمات» معناه إنك لسه ما طلبتش شهادة اللعبة — مش معناه إن شهادة الاختبار ضاعت.</div>
     </div>
     <div class="db-foot"><button class="hn-btn link" onclick="document.getElementById('mzProgOv').remove()">تمام، إقفال</button></div>
   </div>`;
@@ -9653,7 +9655,7 @@ async function showPointsLedger(phone){
   const chip = (l,v) => `<span style="padding:5px 10px;border-radius:12px;background:var(--glass-bg);border:1px solid var(--line);font-size:.75rem;font-weight:800">${l} ${v||0}</span>`;
   box.innerHTML = `<div style="margin-top:12px;padding:14px;border-radius:18px;background:var(--glass-bg-strong);border:1px solid var(--line)">
     <b>🧾 سجل النقاط — إجمالي ${total}</b>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">${chip('📝 اختبارات', P.points_quiz)}${chip('🎓 شهادات', P.points_cert)}${chip('📅 حضور', P.points_attendance)}${chip('⏱️ وقت دراسة', P.points_time)}${chip('🎯 لعبة', P.points_game)}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">${chip('📝 اختبارات', P.points_quiz)}${chip('🎓 شهادات الكلمات', P.points_cert)}${chip('📅 حضور', P.points_attendance)}${chip('⏱️ وقت دراسة', P.points_time)}${chip('🎯 لعبة', P.points_game)}</div>
     <div style="font-size:.78rem;color:var(--ink-soft);line-height:1.9;margin-bottom:10px">📖 <b>دليل الحساب:</b> الاختبار = ${mzPtsCfg().quiz_max} نقطة × النسبة • الشهادة = لكل وحدة مرة واحدة (${mzPtsCfg().cert_t1p}–${mzPtsCfg().cert_t3p}) • دخول كل يوم = ${mzPtsCfg().open_pts} • كل ${mzPtsCfg().time_min_per_pt} دقيقة دراسة = 1 • اللعبة حسب إعداداتها (أعلى نتيجة لكل وحدة، والفرق بس لو اتحسّنت).</div>
     ${rows.length ? rows.map((r,i) => `<div class="detail-row"><span>${r.ic} ${_grE(r.t)}${i===0 ? ' <b style="color:#0E9A56">← آخر زيادة</b>' : ''}<br><small style="color:var(--ink-soft)">${fmt(r.at)}</small></span><span style="color:#0E9A56;font-weight:900">+${r.p}</span></div>`).join('') : '<div class="field-hint">مفيش عمليات مسجّلة بعد</div>'}
     ${before > 0 ? `<div class="detail-row"><span>🗂️ رصيد قبل بدء التسجيل التفصيلي<br><small style="color:var(--ink-soft)">يشمل وقت الدراسة وأي نقاط قديمة</small></span><span style="font-weight:900">${before}</span></div>` : ''}
@@ -11950,7 +11952,7 @@ async function openStudentDetail(phone){
       const rk = n('rank');
       const medal = rk === 1 ? '🥇' : rk === 2 ? '🥈' : rk === 3 ? '🥉' : '🏅';
       const tot = n('total');
-      const bars = [['📝','اختبارات الوحدات', n('quiz'), ''], ['🎓','الشهادات', n('certs'), n('certs_n') ? n('certs_n') + ' شهادة' : ''],
+      const bars = [['📝','اختبارات الوحدات', n('quiz'), ''], ['🎓','شهادات صائد الكلمات', n('certs'), n('certs_n') ? n('certs_n') + ' شهادة' : ''],
                     ['📅','الحضور', n('attendance'), n('days') + ' يوم × ' + n('per_day')], ['🎯','صائد الكلمات', n('game'), '']]
         .map(x => `<div class="sp-r"><span>${x[0]} ${x[1]}${x[3] ? `<small>${x[3]}</small>` : ''}</span><b>+${x[2]}</b></div><div class="sp-bar"><i style="width:${tot > 0 ? Math.round(x[2] / tot * 100) : 0}%"></i></div>`).join('');
       monthHtml = `<div class="sp-card sp-m">
@@ -11968,8 +11970,8 @@ async function openStudentDetail(phone){
       <div class="sp-big"><b>${myPts.points_total}</b><small>${cur.emoji} ${escapeHtml(cur.name)}</small></div>
       <div class="sp-bar sp-bar-lg"><i style="width:${pct}%"></i></div>
       <div class="field-hint" style="margin:6px 0 10px;">${hint}</div>
-      ${row('📝','الاختبارات', myPts.points_quiz)}
-      ${row('🎓','الشهادات', myPts.points_cert)}
+      ${row('📝','اختبارات الوحدات', myPts.points_quiz, 'أعلى درجة في كل وحدة')}
+      ${row('🎓','شهادات صائد الكلمات', myPts.points_cert, 'مش شهادة الاختبار')}
       ${row('📅','الحضور', myPts.points_attendance, myPts.attendance_days + ' يوم')}
       ${row('⏱️','وقت المذاكرة', myPts.points_time, myPts.study_minutes + ' دقيقة')}
       ${row('🎯','صائد الكلمات', myPts.points_game, myPts.game_units + ' وحدة')}
@@ -12587,8 +12589,8 @@ async function prepareExamStart(){
   const allQs = await fetchQuizQuestions(currentUnitId);
   const wordPool = allQs.filter(q => q.question_type === 'word');
   const grammarPool = allQs.filter(q => q.question_type !== 'word');
-  const wordCount = Math.min(currentUnit.quiz_word_count ?? 5, wordPool.length);
-  const grammarCount = Math.min(currentUnit.quiz_grammar_count ?? 5, grammarPool.length);
+  const wordCount = Math.min(currentUnit.quiz_word_count ?? 20, wordPool.length);
+  const grammarCount = Math.min(currentUnit.quiz_grammar_count ?? 0, grammarPool.length);
 
   const buildQ = (q) => {
     if(q.question_type === 'construct'){
@@ -13926,8 +13928,8 @@ async function loadAdminQuizUnits(){
 
   document.getElementById('quizOpenToggle').checked = !!unit.quiz_open;
   document.getElementById('quizOpenLabel').innerText = unit.quiz_open ? 'الاختبار متاح للطلاب الآن ✅' : 'الاختبار مقفول أمام الطلاب 🔒';
-  document.getElementById('quizWordCount').value = unit.quiz_word_count ?? 5;
-  document.getElementById('quizGrammarCount').value = unit.quiz_grammar_count ?? 5;
+  document.getElementById('quizWordCount').value = unit.quiz_word_count ?? 20;
+  document.getElementById('quizGrammarCount').value = unit.quiz_grammar_count ?? 0;
 
   document.getElementById('examDuration').value = unit.exam_duration_minutes ?? '';
   document.getElementById('examStartAt').value = unit.exam_start_at ? toLocalDatetimeValue(unit.exam_start_at) : '';
@@ -14336,149 +14338,70 @@ async function saveQuizCounts(){
   }catch(e){ console.error(e); showToast('❌ حصل خطأ'); }
 }
 
-/* ---- Auto-generated word questions — template pool ----
-   Several distinct question shapes instead of one repeated phrasing, so
-   a quiz doesn't read as "What does X mean?" forty times in a row.
-   Every shape still has exactly ONE correct choice (no multi-select,
-   no ambiguity) — that's non-negotiable for a student-facing quiz.
-   Two are straightforward recall (easy), two lean on the example
-   sentence for a bit more context (a notch harder) — mixed together
-   below so a unit ends up mostly-easy with a few tougher ones, never
-   a run of only-hard or only-trivial questions. */
 function escapeRegExpLiteral(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-/* Easy — sees the English word, picks its Arabic meaning (classic recall). */
-function tplWordMeaningEnAr(w, pool){
-  const distractors = shuffleArray(pool.filter(x => x.id !== w.id && x.word_ar)).slice(0, 3).map(x => x.word_ar);
-  while(distractors.length < 3) distractors.push('—');
-  const choices = shuffleArray(['*' + w.word_ar, ...distractors]);
-  return `What does '${w.word_en}' mean? | ${choices.join(' | ')}`;
-}
-/* Easy/medium — reversed: sees the Arabic meaning, picks the English word. */
-function tplWordMeaningArEn(w, pool){
-  const distractors = shuffleArray(pool.filter(x => x.id !== w.id && x.word_en)).slice(0, 3).map(x => x.word_en);
-  while(distractors.length < 3) distractors.push('—');
-  const choices = shuffleArray(['*' + w.word_en, ...distractors]);
-  return `أي كلمة إنجليزية معناها "${w.word_ar}"؟ | ${choices.join(' | ')}`;
-}
-/* Medium — needs an example sentence: reads it in context, picks the meaning. */
-function tplWordInContext(w, pool){
-  if(!w.example_en) return null;
-  const distractors = shuffleArray(pool.filter(x => x.id !== w.id && x.word_ar)).slice(0, 3).map(x => x.word_ar);
-  while(distractors.length < 3) distractors.push('—');
-  const choices = shuffleArray(['*' + w.word_ar, ...distractors]);
-  return `في الجملة: "${w.example_en}" — كلمة '${w.word_en}' معناها إيه؟ | ${choices.join(' | ')}`;
-}
-/* Medium — needs an example sentence that actually contains the word: blanks
-   it out and asks which word completes it (a step beyond plain recall). */
-function tplFillTheBlank(w, pool){
-  if(!w.example_en) return null;
-  const re = new RegExp('\\b' + escapeRegExpLiteral(w.word_en) + '\\b', 'i');
-  if(!re.test(w.example_en)) return null;
-  const blanked = w.example_en.replace(re, '_____');
-  const distractors = shuffleArray(pool.filter(x => x.id !== w.id && x.word_en)).slice(0, 3).map(x => x.word_en);
-  while(distractors.length < 3) distractors.push('—');
-  const choices = shuffleArray(['*' + w.word_en, ...distractors]);
-  return `Complete the sentence: ${blanked} | ${choices.join(' | ')}`;
-}
-/* Weighted pool: easy shapes appear more often than the context-based ones,
-   so the overall mix stays mostly-easy with a bit of harder mixed in — not
-   a wall of the same question, and not a run of tough ones either. */
-const WORD_QUESTION_TEMPLATES = [
-  { build: tplWordMeaningEnAr, weight: 3 },
-  { build: tplWordMeaningArEn, weight: 2 },
-  { build: tplWordInContext,   weight: 2 },
-  { build: tplFillTheBlank,    weight: 2 },
-];
-function pickWordQuestionLine(w, pool){
-  const weighted = [];
-  WORD_QUESTION_TEMPLATES.forEach(t => { for(let i = 0; i < t.weight; i++) weighted.push(t.build); });
-  for(const build of shuffleArray(weighted)){
-    const line = build(w, pool);
-    if(line) return line; // some templates need an example sentence and return null otherwise
-  }
-  return tplWordMeaningEnAr(w, pool); // always works as long as the word has a meaning
-}
-
-/* Regenerates the "# أسئلة الكلمات" section from the unit's current vocabulary,
-   using a mix of question shapes (see templates above) instead of one fixed
-   phrasing — leaving the "# أسئلة الجرامر" section (and anything else the
-   admin wrote) untouched. Nothing is saved until "حفظ كل الأسئلة" is pressed. */
 /* ============================================================
-   توليد تلقائي عند فتح الاختبار: لو الوحدة مفيهاش أي أسئلة، بنولّد أسئلة كلمات
-   من مفرداتها (نفس قوالب المولّد العادي) ونحفظها فورًا، وبعدين الاختبار يتفتح.
-   لو الوحدة فيها أسئلة أصلًا ما بنلمسهاش. الأسئلة الأصعب لسه من زرار المولّد الذكي.
+   مولّد الأسئلة الصعبة — الوحيد في النظام (الأسئلة السهلة «What does X mean» اتشالت)
+   • سؤال واحد لكل كلمة، والمساعد الذكي بيكتبهم 12 كلمة في كل دفعة.
+   • كل سؤال له إجابة واحدة بس (فحص شكل + المساعد بيحل الأسئلة من غير ما يعرف الإجابة).
+   • إطار تحميل واضح بيورّيك كل خطوة، ومفيش رجوع للتوليد البسيط أبدًا.
+   • الاختبار نفسه بيسحب أسئلته عشوائي من الأسئلة المحفوظة (زي ما كان).
 ============================================================ */
-async function ensureQuizQuestions(unitId){
-  // عدّ مباشر من الداتابيز: لو فشل التأكد نوقف، عشان ما نستبدلش أسئلة موجودة بالغلط
-  const { count: qCount, error: qErr } = await _supabase.from('quiz_questions').select('id', { count:'exact', head:true }).eq('unit_id', unitId);
-  if(qErr) throw new Error('مقدرتش أتأكد من أسئلة الوحدة (مشكلة اتصال) — جرّب تاني');
-  if(qCount > 0) return { generated: 0 };
-  const words = (await fetchWords(unitId, true)).filter(w => (w.item_type || 'word') === 'word' && w.word_en && w.word_ar);
-  if(!words.length){
-    const msg = 'الوحدة دي مفيهاش كلمات ولا أسئلة أصلًا، فمفيش حاجة أولّد منها — ضيف كلمات للوحدة وهتتولّد الأسئلة لوحدها';
-    showToast('⚠️ ' + msg, 9000);
-    throw new Error(msg);
-  }
-  const picked = shuffleArray(words).slice(0, 60);
-  const items = picked.map((w, i) => {
-    const parts = pickWordQuestionLine(w, words).split('|').map(p => p.trim()).filter(Boolean);
-    const choices = []; let correct_index = 0;
-    parts.slice(1).forEach((c, ci) => { if(c.startsWith('*')){ correct_index = ci; choices.push(c.substring(1).trim()); } else choices.push(c); });
-    return { unit_id: unitId, question_text: parts[0], choices, correct_index, correct_order: null, passage_text: null, question_type: 'word', points: 1, order_index: i };
-  }).filter(q => q.question_text && q.choices.length >= 2);
-  await adminReplaceUnitContent('quiz_questions', unitId, items);
-  await fetchQuizQuestions(unitId, true);
-  window.__autoGenCount = items.length;
-  showToast('✨ الوحدة مكانش فيها أسئلة — ولّدت ' + items.length + ' سؤال تلقائيًا من كلماتها');
-  return { generated: items.length };
-}
-
-async function regenerateWordQuestionsBasic(){
-  if(!adminSelectedUnitId) return;
-  const words = (await fetchWords(adminSelectedUnitId, true)).filter(w => (w.item_type || 'word') === 'word' && w.word_ar);
-  if(!words.length){ showToast('لسه مفيش كلمات في الوحدة دي عشان نولّد منها أسئلة'); return; }
-  const wordLines = words.map(w => pickWordQuestionLine(w, words));
-
-  const editor = document.getElementById('unifiedQuizEditorInput');
-  const text = editor.value;
-  const grammarMatch = text.split(/\n?#[^\n]*جرامر[^\n]*\n?/i);
-  const grammarSection = grammarMatch.length > 1 ? grammarMatch[grammarMatch.length - 1].trim() : '';
-  editor.value = '# أسئلة الكلمات\n' + wordLines.join('\n') + '\n\n# أسئلة الجرامر\n' + grammarSection;
-  showToast('✅ اتولدت أسئلة كلمات متنوعة (راجعها قبل الحفظ)');
-}
-
-
-/* ============================================================
-   توليد أسئلة كلمات صعبة وبإجابة واحدة بس — لكل وحدة من مفرداتها هي
-   1) المساعد الذكي يكتب الأسئلة (حروف جر / collocations / كلمة في سياق / ...) حسب نوع مفردات الوحدة والمرحلة.
-   2) فحص محلي صارم للشكل (4 اختيارات، نجمة واحدة، مفيش تكرار).
-   3) تحقق تاني: المساعد بيحل الأسئلة "من غير ما يعرف الإجابة"، وأي سؤال اختار فيه إجابة تانية
-      أو قال إن أكتر من اختيار ينفع بيتشال تلقائيًا.
-   مفيش حاجة بتتحفظ إلا لما تدوسي «حفظ كل الأسئلة». لو المساعد مش متاح بنرجع للتوليد البسيط القديم.
-============================================================ */
+const MZ_HARD_BATCH = 50;          // كلمات في الدفعة الواحدة = 50 سؤال صعب في كل توليد
+const MZ_HARD_MIN_Q = 50;          // أقل عدد أسئلة في التوليد الواحد (لو الوحدة كلماتها أقل، بنعمل سؤالين لبعض الكلمات)
+const MZ_HARD_MAX_WORDS = 150;     // أقصى عدد كلمات بتتولّد لها أسئلة للوحدة الواحدة (بيحمي الحد اليومي للمساعد)
+const MZ_HARD_CALL_TIMEOUT_MS = 180000;
 let _hardGenBusy = false;
 
-function mzBuildHardWordsPrompt(stageLabel, unitTitle, batch, nQ){
-  const list = batch.map(w => w.word_en + (w.word_ar ? ' = ' + w.word_ar : '') + (w.example_en ? '  (e.g. ' + w.example_en + ')' : '')).join('\n');
+const MZ_EASY_Q_RE = [/^what does .* mean/i, /^أي كلمة إنجليزية معناها/, /^في الجملة:.*معناها/, /^complete the sentence:/i];
+function mzIsEasyTemplateQ(text){ const t = String(text || '').trim(); return MZ_EASY_Q_RE.some(re => re.test(t)); }
+
+function mzGenFrame(title){
+  if(!document.getElementById('mzGenCss')){
+    const st = document.createElement('style'); st.id = 'mzGenCss';
+    st.textContent = '@keyframes mzSpin{to{transform:rotate(360deg)}} .mzg-ov{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}.mzg-card{width:min(440px,100%);max-height:90vh;overflow:auto;background:var(--card-bg,#fff);color:var(--ink,#222);border-radius:20px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.35);direction:rtl;font-family:inherit}.mzg-h{font-weight:900;font-size:1.02rem;margin-bottom:8px;display:flex;gap:8px;align-items:center}.mzg-sp{width:18px;height:18px;border:3px solid var(--line,#ddd);border-top-color:var(--teal,#0aa);border-radius:50%;animation:mzSpin .8s linear infinite;flex:none}.mzg-s{font-weight:800;font-size:.86rem;line-height:1.7;margin:6px 0}.mzg-bar{height:12px;background:var(--line,#e5e5e5);border-radius:99px;overflow:hidden;margin:8px 0}.mzg-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal,#0aa),var(--gold,#e8b100));transition:width .35s}.mzg-bar.live i{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.35) 0 10px,transparent 10px 20px);background-size:28px 28px;animation:mzStripe .7s linear infinite}@keyframes mzStripe{to{background-position:28px 0}}.mzg-m{display:flex;justify-content:space-between;font-size:.74rem;font-weight:800;color:var(--ink-soft,#777)}.mzg-log{margin-top:8px;max-height:130px;overflow:auto;font-size:.72rem;line-height:1.8;color:var(--ink-soft,#777);background:rgba(127,127,127,.08);border-radius:10px;padding:6px 10px}.mzg-b{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.mzg-b button{flex:1;min-width:110px;border:0;border-radius:12px;padding:10px 12px;font-weight:800;font-family:inherit;cursor:pointer;background:var(--ink-soft,#777);color:#fff}.mzg-b button.p{background:var(--teal,#0aa)}';
+    document.head.appendChild(st);
+  }
+  const ov = document.createElement('div'); ov.className = 'mzg-ov';
+  ov.innerHTML = '<div class="mzg-card"><div class="mzg-h"><span class="mzg-sp"></span><span class="mzg-t"></span></div><div class="mzg-s">جاري التجهيز…</div><div class="mzg-bar"><i></i></div><div class="mzg-m"><span class="mzg-c"></span><span class="mzg-e">⏱️ 0:00</span></div><div class="mzg-log"></div><div class="mzg-b"></div></div>';
+  document.body.appendChild(ov);
+  const q = s => ov.querySelector(s);
+  q('.mzg-t').textContent = title;
+  const f = { cancelled: false, t0: Date.now() };
+  const tick = setInterval(() => { const s = Math.floor((Date.now() - f.t0) / 1000); q('.mzg-e').textContent = '⏱️ ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }, 1000);
+  const btns = (list) => { const b = q('.mzg-b'); b.innerHTML = ''; list.forEach(x => { const el = document.createElement('button'); el.textContent = x.label; if(x.primary) el.className = 'p'; el.onclick = x.onClick; b.appendChild(el); }); };
+  f.status = t => { q('.mzg-s').textContent = t; };
+  f.progress = (done, total, label) => { q('.mzg-bar i').style.width = (total ? Math.min(100, Math.round(done / total * 100)) : 0) + '%'; q('.mzg-c').textContent = label || ''; };
+  f.log = t => { const l = q('.mzg-log'); const d = document.createElement('div'); d.textContent = t; l.appendChild(d); l.scrollTop = l.scrollHeight; };
+  let busyT = null;
+  f.busy = (text) => { f.idle(); const t1 = Date.now(); q('.mzg-bar').classList.add('live'); const upd = () => { f.status('⏳ ' + text + ' — شغّال بقاله ' + Math.floor((Date.now() - t1) / 1000) + ' ثانية (متقلقش، بيشتغل)'); }; upd(); busyT = setInterval(upd, 1000); };
+  f.idle = () => { if(busyT){ clearInterval(busyT); busyT = null; } q('.mzg-bar').classList.remove('live'); };
+  f.close = () => { f.idle(); clearInterval(tick); ov.remove(); };
+  f.running = () => btns([{ label: 'إلغاء', onClick: () => { f.cancelled = true; f.status('⏹️ بوقف بعد الخطوة الحالية…'); } }]);
+  f.finish = (ok, text, list) => { f.idle(); clearInterval(tick); q('.mzg-sp').style.display = 'none'; q('.mzg-t').textContent = (ok ? '✅ ' : '⚠️ ') + title; f.status(text); if(ok) q('.mzg-bar i').style.width = '100%'; btns(list || [{ label: 'تمام', primary: true, onClick: f.close }]); };
+  f.running();
+  return f;
+}
+
+function mzBuildHardWordsPrompt(stageLabel, unitTitle, batch, target){
+  target = target || batch.length;
+  const list = batch.map((w, i) => (i + 1) + ') ' + w.word_en + (w.word_ar ? ' = ' + w.word_ar : '') + (w.example_en ? '  (e.g. ' + w.example_en + ')' : '')).join('\n');
   return [
-    'مهمة: اكتبي ' + nQ + ' سؤال اختيار من متعدد لتدريب المفردات فقط، للمرحلة «' + stageLabel + '» — الوحدة «' + unitTitle + '».',
-    'ردّي بالأسئلة بس، سطر لكل سؤال، من غير شرح ولا ترقيم ولا كروت ولا أي إجراءات.',
+    'مهمة: اكتبي ' + target + ' سؤال اختيار من متعدد لتدريب المفردات فقط — ' + (target > batch.length ? 'سؤال واحد على الأقل لكل كلمة من القايمة (ولا كلمة تتساب) والباقي أسئلة تانية بشكل مختلف على كلمات من القايمة بدون تكرار نفس الجملة' : 'سؤال واحد بالظبط لكل كلمة من القايمة (ولا كلمة تتساب)') + '، للمرحلة «' + stageLabel + '» — الوحدة «' + unitTitle + '».',
+    'ردّي بالأسئلة بس، سطر لكل سؤال، من غير شرح ولا كروت ولا أي إجراءات. ابدأي كل سطر برقم الكلمة اللي السؤال عنها.',
     '',
     'الصيغة بالظبط (نجمة قبل الإجابة الصحيحة بس):',
-    'Sentence with --- blank | *correct | wrong | wrong | wrong',
+    '3) Sentence with --- blank | *correct | wrong | wrong | wrong',
     '',
     'القواعد:',
-    '1) الأسئلة تدور حوالين مفردات وتعبيرات القايمة تحت بس. حلّلي نوع المفردات الأول (أفعال مع حروف جر، أفعال مركبة، collocations، صفات، أسماء، تعبيرات اصطلاحية، مصطلحات متخصصة) واختاري شكل السؤال المناسب لكل نوع، بمستوى صعوبة يليق بـ ' + stageLabel + '.',
-    '2) الأشكال المسموحة: (أ) جملة قصيرة بموقف واضح وفراغ --- يتكمل بالكلمة/التعبير الصح. (ب) حرف الجر الصح بعد فعل أو تعبير (الاختيارات الأربعة حروف جر). (ج) collocation: الفعل أو الصفة الصح اللي بيمشي مع الكلمة. (د) تعريف بالإنجليزي واختاري الكلمة. (هـ) الكلمة الغريبة بين كلمات من القايمة. (و) معنى تعبير اصطلاحي بجملة إنجليزي.',
-    '3) شرط أساسي: إجابة صحيحة واحدة فقط. قبل ما تكتبي أي سؤال جرّبي كل اختيار من الأربعة في الفراغ: لو أي اختيار غير الصحيح ينفع نحويًا أو بالمعنى، غيّري الجملة أو الاختيارات. الاختيارات الغلط لازم تكون مستحيلة في الجملة (غلط نحويًا أو عكس السياق).',
-    '4) ممنوع مرادفات بين الاختيارات، وممنوع اختيار شبه صحيح، وممنوع «all of the above» و«none of the above».',
-    '5) الاختيارات الغلط من نفس نوع الإجابة (حروف جر مع حروف جر، أفعال مع أفعال)، ومن كلمات القايمة نفسها لما يكون ممكن.',
-    '6) إنجليزي بسيط وواضح، والفراغ دايمًا --- (3 شرطات).',
-    '7) ممنوع أسئلة ترجمة من/إلى العربي (زي What does X mean)، وممنوع أسئلة جرامر (أزمنة وتصريف). الكلمات بس.',
-    '8) ما تكرريش نفس المفردة في أكتر من سؤال لو أمكن، ووزّعي الأسئلة على القايمة كلها.',
+    '1) السؤال لازم يختبر الكلمة نفسها (أو التعبير نفسه) بمستوى صعب يليق بـ ' + stageLabel + '. حلّلي نوع الكلمة واختاري الشكل المناسب: (أ) جملة قصيرة بموقف واضح وفراغ --- يتكمل بالكلمة الصح. (ب) حرف الجر الصح بعد فعل أو تعبير. (ج) collocation: الكلمة اللي بتمشي مع الكلمة دي. (د) تعريف بالإنجليزي واختاري الكلمة. ',
+    '2) شرط أساسي: إجابة صحيحة واحدة فقط. جرّبي كل اختيار من الأربعة في الفراغ: لو أي اختيار غير الصحيح ينفع نحويًا أو بالمعنى، غيّري الجملة أو الاختيارات. الاختيارات الغلط لازم تكون مستحيلة في الجملة.',
+    '3) ممنوع مرادفات بين الاختيارات، وممنوع اختيار شبه صحيح، وممنوع «all of the above» و«none of the above».',
+    '4) الاختيارات الغلط من نفس نوع الإجابة، ومن كلمات القايمة نفسها لما يكون ممكن.',
+    '5) إنجليزي بسيط وواضح، والفراغ دايمًا --- (3 شرطات).',
+    '6) ممنوع أسئلة ترجمة من/إلى العربي (زي What does X mean)، وممنوع أسئلة جرامر (أزمنة وتصريف). المفردات بس.',
     '',
-    'مفردات الوحدة:',
+    'الكلمات:',
     list
   ].join('\n');
 }
@@ -14486,7 +14409,9 @@ function mzBuildHardWordsPrompt(stageLabel, unitTitle, batch, nQ){
 function mzParseHardQuestionLines(txt){
   const items = [], seen = new Set(); let rejected = 0;
   String(txt || '').split('\n').forEach(raw => {
-    const line = raw.trim().replace(/^\s*(?:\d+\s*[.)]|[-•])\s+/, '');
+    let line = raw.trim(), idx = null;
+    const mn = line.match(/^(\d+)\s*[.)]\s+/);
+    if(mn){ idx = +mn[1]; line = line.slice(mn[0].length); } else line = line.replace(/^\s*[-•]\s+/, '');
     if(!line.includes('|')) return;
     const parts = line.split('|').map(p => p.trim());
     if(parts.length !== 5 || parts.some(p => !p)){ rejected++; return; }
@@ -14496,11 +14421,11 @@ function mzParseHardQuestionLines(txt){
     if(new Set(clean.map(c => c.toLowerCase())).size !== 4 || clean.some(c => !c)){ rejected++; return; }
     if(/all of the above|none of the above|both of|all are|none are/i.test(clean.join(' '))){ rejected++; return; }
     if(!(/---/.test(q) || /\?\s*$/.test(q) || /(is called|means that|means|is a|are)\b/i.test(q))){ rejected++; return; }
-    if(/^what does .* mean/i.test(q)){ rejected++; return; }
+    if(mzIsEasyTemplateQ(q)){ rejected++; return; }
     const key = q.toLowerCase();
     if(seen.has(key)) return;
     seen.add(key);
-    items.push({ q, choices: clean, correct: ch.findIndex(c => c.startsWith('*')) });
+    items.push({ q, choices: clean, correct: ch.findIndex(c => c.startsWith('*')), idx });
   });
   return { items, rejected };
 }
@@ -14514,105 +14439,218 @@ function mzAiBlob(j){
 async function mzHardAiCall(text, unitTitle, stageLabel){
   const stages = (typeof STAGES !== 'undefined' ? STAGES : []).map(s => ({ key: s.key, label: s.label }));
   const br = window.mzaiBridge;
-  const j = await br.call({ token: adminToken, text, images: [], unit: unitTitle, stage: stageLabel, stages, all_stages: stages, stats: {} });
-  br.bump();
-  return j;
+  const call = br.call({ token: adminToken, text, images: [], unit: unitTitle, stage: stageLabel, stages, all_stages: stages, stats: {} });
+  const to = new Promise((_, rej) => setTimeout(() => rej(new Error('المساعد اتأخر أكتر من 3 دقايق')), MZ_HARD_CALL_TIMEOUT_MS));
+  try{ const j = await Promise.race([call, to]); br.bump(); return j; }
+  catch(e){ try{ br.bump(); }catch(_){} throw e; }
 }
 
+/* بيولّد سؤال صعب لكل كلمة. بيرجّع { items, covered, total, stopped, unverified, error } */
+async function mzHardGenerate({ words, unitTitle, stageLabel, frame, maxWords }){
+  const out = { items: [], covered: 0, total: 0, stopped: '', unverified: false, error: '' };
+  const br = window.mzaiBridge;
+  if(!br || typeof adminToken === 'undefined' || !adminToken){ out.error = 'المساعد الذكي مش متاح دلوقتي (اتأكد إنك داخل بحساب الإدارة وإن المساعد شغال)'; return out; }
+  const rem = () => { const r = br.remaining(); return isFinite(r) ? r : 1e9; };
+  const list = shuffleArray(words).slice(0, maxWords || MZ_HARD_MAX_WORDS);
+  out.total = list.length;
+  const covered = new Set(), accepted = [], queue = [];
+  let rejectedAll = 0;
+
+  const verify = async (chunk, label) => {
+    if(!chunk.length) return;
+    if(rem() < 1){ out.unverified = true; chunk.forEach(x => accepted.push(x)); frame.log('⚠️ الحد اليومي خلص — ' + chunk.length + ' سؤال من غير تحقق'); return; }
+    frame.busy('بتأكد إن كل سؤال من الـ ' + chunk.length + ' ليه إجابة واحدة بس');
+    const prepared = chunk.map(x => { const order = shuffleArray([0, 1, 2, 3]); return { x, shown: order.map(i => x.choices[i]), correctShown: order.indexOf(x.correct) + 1 }; });
+    let verdicts = null;
+    try{
+      const vText = ['حلّي الأسئلة دي كأنك مش عارفة الإجابة. لكل سؤال اكتبي سطر واحد بالصيغة: رقم السؤال | رقم الاختيار الأنسب (1 إلى 4) | ok لو اختيار واحد بس ينفع لغويًا وبالمعنى، أو MULTI لو أكتر من اختيار ينفع، أو NONE لو ولا واحد ينفع.', 'ردّي بالسطور بس من غير شرح.', '']
+        .concat(prepared.map((p, i) => (i + 1) + ') ' + p.x.q + '  [1] ' + p.shown[0] + '  [2] ' + p.shown[1] + '  [3] ' + p.shown[2] + '  [4] ' + p.shown[3])).join('\n');
+      const vj = await mzHardAiCall(vText, unitTitle, stageLabel);
+      frame.idle();
+      verdicts = {};
+      mzAiBlob(vj).split('\n').forEach(l => { const m = l.trim().match(/^(\d+)\s*[|:]\s*([1-4])\s*[|:]\s*(ok|multi|none)/i); if(m) verdicts[+m[1]] = { pick: +m[2], flag: m[3].toLowerCase() }; });
+      if(!Object.keys(verdicts).length) verdicts = null;
+    }catch(e){ console.error(e); verdicts = null; }
+    if(!verdicts){ out.unverified = true; prepared.forEach(p => accepted.push(p.x)); frame.log('⚠️ التحقق ما اشتغلش لـ ' + chunk.length + ' سؤال'); return; }
+    let dropped = 0;
+    prepared.forEach((p, i) => { const v = verdicts[i + 1]; if(!v || v.flag !== 'ok' || v.pick !== p.correctShown){ dropped++; if(p.x.wid != null) covered.delete(p.x.wid); } else accepted.push(p.x); });
+    if(dropped){ rejectedAll += dropped; frame.log('🧹 اتشال ' + dropped + ' سؤال مش مضمون إن ليه إجابة واحدة'); }
+  };
+
+  const perWord = {};
+  const minQ = list.length < MZ_HARD_MIN_Q ? MZ_HARD_MIN_Q : 0;
+  const runBatch = async (batch, tag) => {
+    const target = Math.max(batch.length, minQ);
+    const text = mzBuildHardWordsPrompt(stageLabel, unitTitle, batch, target);
+    let parsed = null, lastErr = null;
+    for(let attempt = 0; attempt < 2 && !parsed; attempt++){
+      if(attempt && rem() < 2) break;
+      try{ parsed = mzParseHardQuestionLines(mzAiBlob(await mzHardAiCall(text, unitTitle, stageLabel))); }
+      catch(e){ lastErr = e; frame.log('⚠️ ' + tag + ': ' + (e && e.message ? e.message : 'فشل النداء') + (attempt ? '' : ' — هجرّب تاني')); }
+    }
+    if(!parsed){ if(lastErr && !out.error) out.error = (lastErr && lastErr.message) || ''; return 0; }
+    rejectedAll += parsed.rejected;
+    let got = 0;
+    parsed.items.forEach(it => {
+      let w = (it.idx && batch[it.idx - 1]) || null;
+      if(!w){ const hay = (it.q + ' ' + it.choices.join(' ')).toLowerCase(); w = batch.find(b => b.word_en && hay.includes(String(b.word_en).toLowerCase())) || null; }
+      if(w && (perWord[w.id] || 0) >= (minQ ? Math.ceil(minQ / list.length) : 1)) return;
+      if(w){ perWord[w.id] = (perWord[w.id] || 0) + 1; covered.add(w.id); }
+      queue.push({ q: it.q, choices: it.choices, correct: it.correct, wid: w ? w.id : null }); got++;
+    });
+    return got;
+  };
+
+  const doPass = async (pool, passLabel) => {
+    const nB = Math.ceil(pool.length / MZ_HARD_BATCH);
+    for(let b = 0; b < nB; b++){
+      if(frame.cancelled){ out.stopped = 'cancel'; return; }
+      if(rem() < 2){ out.stopped = 'quota'; return; }
+      const batch = pool.slice(b * MZ_HARD_BATCH, (b + 1) * MZ_HARD_BATCH);
+      frame.progress(covered.size + batch.length * 0.5, list.length, covered.size + ' / ' + list.length + ' كلمة');
+      frame.busy(passLabel + ' — دفعة ' + (b + 1) + ' من ' + nB + ': المساعد بيكتب ' + Math.max(batch.length, minQ) + ' سؤال صعب');
+      const got = await runBatch(batch, 'دفعة ' + (b + 1));
+      frame.idle();
+      frame.log('دفعة ' + (b + 1) + ': ' + got + ' سؤال من ' + batch.length + ' كلمة');
+      frame.progress(covered.size, list.length, covered.size + ' / ' + list.length + ' كلمة');
+      if(queue.length >= 50){ await verify(queue.splice(0, queue.length), ''); frame.progress(covered.size, list.length, covered.size + ' / ' + list.length + ' كلمة'); }
+    }
+  };
+
+  await doPass(list, 'توليد الأسئلة');
+  if(queue.length && !frame.cancelled) await verify(queue.splice(0, queue.length), '');
+  // تعويض الكلمات اللي ما خدتش سؤال (أو سؤالها اتشال) — مرة واحدة
+  const missing = list.filter(w => !covered.has(w.id));
+  if(missing.length && !out.stopped && !frame.cancelled && rem() >= 2){
+    frame.log('↻ بعوّض ' + missing.length + ' كلمة ناقصة');
+    await doPass(missing, 'تعويض الكلمات الناقصة');
+    if(queue.length) await verify(queue.splice(0, queue.length), '');
+  } else if(queue.length){ queue.forEach(x => accepted.push(x)); queue.length = 0; }
+
+  out.items = accepted;
+  out.covered = covered.size;
+  if(!out.items.length && !out.error) out.error = out.stopped === 'quota' ? 'الحد اليومي للمساعد الذكي خلص — كمّل بكرة أو زوّد الحد من إعدادات المساعد' : 'المساعد ما رجّعش أسئلة صالحة';
+  return out;
+}
+
+function mzHardItemsToRows(unitId, items, startIdx){
+  return shuffleArray(items).map((it, i) => {
+    const order = shuffleArray([0, 1, 2, 3]);
+    return { unit_id: unitId, question_text: it.q, choices: order.map(k => it.choices[k]), correct_index: order.indexOf(it.correct), correct_order: null, passage_text: null, question_type: 'word', points: 1, order_index: (startIdx || 0) + i };
+  });
+}
+
+/* فتح الاختبار: لو الوحدة مفيهاش أسئلة بتتولّد أسئلة صعبة وتتحفظ الأول (مع إطار تحميل)، وبعدين الاختبار يتفتح */
+async function ensureQuizQuestions(unitId){
+  const { count: qCount, error: qErr } = await _supabase.from('quiz_questions').select('id', { count:'exact', head:true }).eq('unit_id', unitId);
+  if(qErr) throw new Error('مقدرتش أتأكد من أسئلة الوحدة (مشكلة اتصال) — جرّب تاني');
+  if(qCount > 0) return { generated: 0 };
+  const words = (await fetchWords(unitId, true)).filter(w => (w.item_type || 'word') === 'word' && w.word_en && String(w.word_en).trim());
+  if(!words.length){
+    const msg = 'الوحدة دي مفيهاش كلمات ولا أسئلة، فمفيش حاجة أولّد منها — ضيف كلمات للوحدة وهتتولّد الأسئلة لوحدها';
+    showToast('⚠️ ' + msg, 9000); throw new Error(msg);
+  }
+  const { data: u } = await _supabase.from('units').select('title,unit_number,stage_key').eq('id', unitId).maybeSingle();
+  const unitTitle = (u && u.title) || ('Unit ' + ((u && u.unit_number) || ''));
+  const stageLabel = ((typeof STAGES !== 'undefined' ? STAGES : []).find(s => s.key === (u && u.stage_key)) || {}).label || (u && u.stage_key) || '';
+  const frame = mzGenFrame('توليد أسئلة صعبة — ' + unitTitle);
+  frame.status('الوحدة مفيهاش أسئلة — بولّد أسئلة صعبة (' + MZ_HARD_BATCH + ' سؤال في كل دفعة) قبل ما أفتح الاختبار…');
+  let r;
+  try{ r = await mzHardGenerate({ words, unitTitle, stageLabel, frame }); }
+  catch(e){ console.error(e); r = { items: [], covered: 0, total: 0, error: (e && e.message) || 'خطأ غير متوقع' }; }
+  const need = Math.min(8, words.length);
+  if(frame.cancelled || r.items.length < need){
+    const msg = frame.cancelled ? 'اتلغى التوليد — الاختبار ما اتفتحش' : ('ما قدرتش أجهّز أسئلة كفاية (' + r.items.length + ') — ' + (r.error || 'جرّب تاني') + '. الاختبار ما اتفتحش.');
+    frame.finish(false, msg); throw new Error(msg);
+  }
+  await adminReplaceUnitContent('quiz_questions', unitId, mzHardItemsToRows(unitId, r.items, 0));
+  await fetchQuizQuestions(unitId, true);
+  window.__autoGenCount = r.items.length;
+  frame.finish(true, 'اتولّد وحُفظ ' + r.items.length + ' سؤال صعب (' + r.covered + ' من ' + r.total + ' كلمة)' + (r.stopped === 'quota' ? ' — الحد اليومي للمساعد خلص قبل ما نغطي كل الكلمات' : '') + (r.unverified ? ' — بعضهم من غير تحقق تلقائي' : '') + '. بفتح الاختبار…', [{ label: 'تمام', primary: true, onClick: frame.close }]);
+  setTimeout(() => { try{ frame.close(); }catch(_){} }, 3500);
+  return { generated: r.items.length };
+}
+
+/* زرار المحرر: يولّد أسئلة صعبة للوحدة المختارة ويحطها في المحرر (وتتحفظ بزرار الحفظ) */
 async function regenerateWordQuestions(){
   if(!adminSelectedUnitId || _hardGenBusy) return;
   const words = (await fetchWords(adminSelectedUnitId, true)).filter(w => (w.item_type || 'word') === 'word' && w.word_en && String(w.word_en).trim());
   if(!words.length){ showToast('لسه مفيش كلمات في الوحدة دي عشان نولّد منها أسئلة'); return; }
-
   const stageLabel = (STAGES.find(s => s.key === adminSelectedStage) || {}).label || adminSelectedStage || '';
   let unit = {};
   try{ unit = ((await fetchUnits(adminSelectedStage, true)) || []).find(u => u.id === adminSelectedUnitId) || {}; }catch(_){}
   const unitTitle = unit.title || ('Unit ' + (unit.unit_number || ''));
-
-  const br0 = window.mzaiBridge;
-  const canUseAI = !!br0 && (typeof adminToken !== 'undefined') && adminToken && br0.remaining() >= 2;
-  if(!canUseAI){
-    showToast('المساعد الذكي مش متاح دلوقتي — هولّد بالطريقة البسيطة');
-    return regenerateWordQuestionsBasic();
-  }
-
   _hardGenBusy = true;
+  const frame = mzGenFrame('توليد أسئلة صعبة — ' + unitTitle);
+  frame.status('بولّد أسئلة صعبة — ' + MZ_HARD_BATCH + ' سؤال في كل دفعة (' + Math.min(words.length, MZ_HARD_MAX_WORDS) + ' كلمة)…');
   try{
-    const BATCH = 80, MAX_BATCHES = 4;
-    const shuffled = shuffleArray(words);
-    const batches = [];
-    for(let i = 0; i < shuffled.length && batches.length < MAX_BATCHES; i += BATCH) batches.push(shuffled.slice(i, i + BATCH));
-    const maxBatchesByQuota = Math.max(1, Math.floor(window.mzaiBridge.remaining() / 2));
-    const useBatches = batches.slice(0, isFinite(maxBatchesByQuota) ? maxBatchesByQuota : batches.length);
-
-    const good = []; let rejectedShape = 0, rejectedVerify = 0, unverified = false;
-    for(let b = 0; b < useBatches.length; b++){
-      const batch = useBatches[b];
-      showToast('⏳ بولّد أسئلة صعبة… (' + (b + 1) + '/' + useBatches.length + ')');
-      const nQ = Math.min(24, Math.max(8, Math.round(batch.length / 3.5)));
-      let parsed;
-      try{
-        const j = await mzHardAiCall(mzBuildHardWordsPrompt(stageLabel, unitTitle, batch, nQ), unitTitle, stageLabel);
-        parsed = mzParseHardQuestionLines(mzAiBlob(j));
-      }catch(e){ console.error(e); break; }
-      rejectedShape += parsed.rejected;
-      if(!parsed.items.length) continue;
-
-      // تحقق: المساعد بيحل الأسئلة من غير ما يعرف الإجابة
-      const forCheck = parsed.items.map(it => {
-        const order = shuffleArray([0, 1, 2, 3]);
-        return { it, order, shown: order.map(i => it.choices[i]), correctShown: order.indexOf(it.correct) + 1 };
-      });
-      let verdicts = null;
-      if(window.mzaiBridge.remaining() >= 1){
-        try{
-          showToast('🔎 بتأكد إن كل سؤال له إجابة واحدة بس… (' + (b + 1) + '/' + useBatches.length + ')');
-          const vText = [
-            'حلّي الأسئلة دي كأنك مش عارفة الإجابة. لكل سؤال اكتبي سطر واحد بالصيغة: رقم السؤال | رقم الاختيار الأنسب (1 إلى 4) | ok لو اختيار واحد بس ينفع لغويًا وبالمعنى، أو MULTI لو أكتر من اختيار ينفع، أو NONE لو ولا واحد ينفع.',
-            'ردّي بالسطور بس من غير شرح.',
-            ''
-          ].concat(forCheck.map((x, i) => (i + 1) + ') ' + x.it.q + '  [1] ' + x.shown[0] + '  [2] ' + x.shown[1] + '  [3] ' + x.shown[2] + '  [4] ' + x.shown[3])).join('\n');
-          const vj = await mzHardAiCall(vText, unitTitle, stageLabel);
-          verdicts = {};
-          mzAiBlob(vj).split('\n').forEach(l => {
-            const m = l.trim().match(/^(\d+)\s*[|:]\s*([1-4])\s*[|:]\s*(ok|multi|none)/i);
-            if(m) verdicts[+m[1]] = { pick: +m[2], flag: m[3].toLowerCase() };
-          });
-          if(!Object.keys(verdicts).length) verdicts = null;
-        }catch(e){ console.error(e); verdicts = null; }
-      }
-      if(!verdicts) unverified = true;
-      forCheck.forEach((x, i) => {
-        if(verdicts){
-          const v = verdicts[i + 1];
-          if(!v || v.flag !== 'ok' || v.pick !== x.correctShown){ rejectedVerify++; return; }
-        }
-        good.push(x.it);
-      });
-    }
-
-    if(good.length < 5){
-      showToast('المساعد ما رجّعش أسئلة كفاية — هولّد بالطريقة البسيطة');
-      return regenerateWordQuestionsBasic();
-    }
-
-    const lines = shuffleArray(good).map(it => {
-      const order = shuffleArray([0, 1, 2, 3]);
-      return it.q + ' | ' + order.map(i => (i === it.correct ? '*' : '') + it.choices[i]).join(' | ');
-    });
+    const r = await mzHardGenerate({ words, unitTitle, stageLabel, frame });
+    if(!r.items.length){ frame.finish(false, 'ما اتولّدش أي سؤال — ' + (r.error || 'جرّب تاني')); return; }
+    const lines = mzHardItemsToRows(adminSelectedUnitId, r.items, 0).map(row => row.question_text + ' | ' + row.choices.map((c, i) => (i === row.correct_index ? '*' : '') + c).join(' | '));
     const editor = document.getElementById('unifiedQuizEditorInput');
     const grammarMatch = editor.value.split(/\n?#[^\n]*جرامر[^\n]*\n?/i);
     const grammarSection = grammarMatch.length > 1 ? grammarMatch[grammarMatch.length - 1].trim() : '';
     editor.value = '# أسئلة الكلمات\n' + lines.join('\n') + '\n\n# أسئلة الجرامر\n' + grammarSection;
-    const dropped = rejectedShape + rejectedVerify;
-    showToast('✅ اتولّد ' + good.length + ' سؤال' + (dropped ? ' (اتشال ' + dropped + ' سؤال مش مضمون إن ليه إجابة واحدة)' : '') + (unverified ? ' — التحقق الأوتوماتيكي ما اشتغلش، راجعيهم بنفسك' : '') + ' — راجعيهم قبل الحفظ');
-  }catch(e){
-    console.error(e);
-    showToast('❌ حصل خطأ في التوليد — هولّد بالطريقة البسيطة');
-    try{ await regenerateWordQuestionsBasic(); }catch(_){}
-  }finally{
-    _hardGenBusy = false;
-  }
+    frame.finish(true, 'اتولّد ' + r.items.length + ' سؤال صعب (' + r.covered + ' من ' + r.total + ' كلمة)' + (r.stopped === 'quota' ? ' — الحد اليومي للمساعد خلص قبل ما نغطي كل الكلمات' : '') + (r.unverified ? ' — بعضهم من غير تحقق تلقائي، راجعهم' : '') + '. اتحطوا في المحرر ولسه ما اتحفظوش.',
+      [{ label: '💾 احفظهم دلوقتي', primary: true, onClick: async () => { frame.close(); await saveUnifiedQuizEditor(); } }, { label: 'راجعهم الأول', onClick: frame.close }]);
+  }catch(e){ console.error(e); frame.finish(false, 'حصل خطأ: ' + ((e && e.message) || 'غير معروف')); }
+  finally{ _hardGenBusy = false; }
+}
+
+/* زرار تبديل شامل: أي أسئلة سهلة (What does X mean وأخواتها) في أي وحدة بتتبدّل بأسئلة صعبة، وحدة وحدة */
+async function mzBulkReplaceEasy(){
+  if(_hardGenBusy) return;
+  if(!confirm('هبدّل الأسئلة السهلة (What does X mean وأخواتها) في كل الوحدات بأسئلة صعبة، وحدة وحدة. الأسئلة اللي كتبتها بإيدك والجرامر مش هتتلمس. ممكن ياخد وقت، وهتشوف كل خطوة. نكمّل؟')) return;
+  _hardGenBusy = true;
+  const frame = mzGenFrame('تبديل الأسئلة السهلة بأسئلة صعبة');
+  try{
+    frame.status('بدوّر على الأسئلة السهلة في كل الوحدات…');
+    let rows = [], from = 0;
+    for(;;){
+      const { data, error } = await _supabase.from('quiz_questions').select('*').order('id').range(from, from + 999);
+      if(error) throw error;
+      rows = rows.concat(data || []);
+      if(!data || data.length < 1000) break;
+      from += 1000;
+    }
+    const byUnit = {};
+    rows.forEach(r => { (byUnit[r.unit_id] = byUnit[r.unit_id] || []).push(r); });
+    const ids = Object.keys(byUnit).filter(id => byUnit[id].some(r => mzIsEasyTemplateQ(r.question_text))).map(Number);
+    if(!ids.length){ frame.finish(true, 'مفيش أسئلة سهلة في أي وحدة — كله صعب 👌'); return; }
+    const { data: units } = await _supabase.from('units').select('id,title,unit_number,stage_key').in('id', ids);
+    const info = {}; (units || []).forEach(u => { info[u.id] = u; });
+    const wordsBy = {};
+    for(const id of ids) wordsBy[id] = (await fetchWords(id, true)).filter(w => (w.item_type || 'word') === 'word' && w.word_en && String(w.word_en).trim());
+    ids.sort((a, b) => Math.min(wordsBy[a].length, MZ_HARD_MAX_WORDS) - Math.min(wordsBy[b].length, MZ_HARD_MAX_WORDS));
+    let done = 0, replaced = 0, left = [];
+    for(let n = 0; n < ids.length; n++){
+      const id = ids[n], u = info[id] || {}, words = wordsBy[id];
+      const title = (u.title || ('Unit ' + (u.unit_number || id))) + ' (' + ((typeof STAGES !== 'undefined' ? STAGES : []).find(s => s.key === u.stage_key) || {}).label + ')';
+      if(frame.cancelled){ left = ids.slice(n); break; }
+      if(!words.length){ frame.log('⏭️ ' + title + ': مفيهاش كلمات — اتسابت'); continue; }
+      frame.progress(n, ids.length, 'وحدة ' + (n + 1) + ' من ' + ids.length);
+      frame.log('— ' + title + ' (' + Math.min(words.length, MZ_HARD_MAX_WORDS) + ' كلمة)');
+      const stageLabel = ((typeof STAGES !== 'undefined' ? STAGES : []).find(s => s.key === u.stage_key) || {}).label || u.stage_key || '';
+      const r = await mzHardGenerate({ words, unitTitle: u.title || ('Unit ' + (u.unit_number || '')), stageLabel, frame });
+      const need = Math.min(20, Math.ceil(Math.min(words.length, MZ_HARD_MAX_WORDS) * 0.8));
+      if(r.items.length >= need){
+        const keep = byUnit[id].filter(q => !mzIsEasyTemplateQ(q.question_text)).sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+          .map(q => ({ unit_id: id, question_text: q.question_text, choices: q.choices, correct_index: q.correct_index, correct_order: q.correct_order, passage_text: q.passage_text, question_type: q.question_type, points: q.points || 1, order_index: 0 }));
+        const all = keep.concat(mzHardItemsToRows(id, r.items, 0)).map((q, i) => Object.assign(q, { order_index: i }));
+        await adminReplaceUnitContent('quiz_questions', id, all);
+        try{ await fetchQuizQuestions(id, true); }catch(_){}
+        replaced++; frame.log('✅ ' + title + ': اتبدّل بـ ' + r.items.length + ' سؤال صعب (' + r.covered + ' من ' + r.total + ' كلمة)');
+      } else {
+        left.push(id); frame.log('⏸️ ' + title + ': طلع ' + r.items.length + ' سؤال بس — سبت الأسئلة القديمة زي ما هي');
+      }
+      if(r.stopped === 'quota'){ left = left.concat(ids.slice(n + 1)); frame.log('⛔ الحد اليومي للمساعد خلص'); break; }
+      done++;
+    }
+    frame.progress(ids.length - left.length, ids.length, '');
+    const leftNames = [...new Set(left)].length;
+    frame.finish(!leftNames, 'اتبدّلت ' + replaced + ' وحدة من ' + ids.length + '.' + (leftNames ? ' فاضل ' + leftNames + ' وحدة — دوس الزرار تاني بعد ما الحد اليومي للمساعد يتجدد (أو زوّده من إعدادات المساعد) وهيكمّل من حيث وقف.' : ' كل الاختبارات بقت بأسئلة صعبة 🎉'));
+  }catch(e){ console.error(e); frame.finish(false, 'حصل خطأ: ' + ((e && e.message) || 'غير معروف')); }
+  finally{ _hardGenBusy = false; }
 }
 
 /* Parses the unified editor: '#' lines are section headers/comments and are
@@ -21941,7 +21979,7 @@ function pfTabs(D, own){
   const cnt = t=>ev.filter(e=>e.event_type===t).length;
   const units = new Set(ev.filter(e=>e.event_type==='unit_open').map(e=>e.meta&&e.meta.unit_id)).size;
   const actH = row('🎧 كلمات سمعها',null,p.listen_words||cnt('word_played'))+row('📖 وحدات فتحها',null,units)+row('🔥 الحالية / الأطول',null,(p.streak_days||0)+' / '+(p.best_streak||0)+' يوم')+row('📅 أيام الحضور',null,p.attendance_days||0)+row('⏱️ وقت المذاكرة',null,(p.study_minutes||0)+' دقيقة');
-  const ptsH = [['📝 الاختبارات',p.points_quiz],['🎓 الشهادات',p.points_cert],['📅 الحضور',p.points_attendance],['⏱️ وقت المذاكرة',p.points_time],['🎯 صائد الكلمات',p.points_game],['🔥 تحدي الأيام',p.points_streak],['🎧 السماع',p.points_listen]].map(x=>row(x[0],null,'<b>'+(x[1]||0)+'</b>')).join('')+row('<b>الإجمالي</b>',null,'<b>'+(p.points_total||0)+'</b>');
+  const ptsH = [['📝 الاختبارات',p.points_quiz],['🎓 شهادات صائد الكلمات',p.points_cert],['📅 الحضور',p.points_attendance],['⏱️ وقت المذاكرة',p.points_time],['🎯 صائد الكلمات',p.points_game],['🔥 تحدي الأيام',p.points_streak],['🎧 السماع',p.points_listen]].map(x=>row(x[0],null,'<b>'+(x[1]||0)+'</b>')).join('')+row('<b>الإجمالي</b>',null,'<b>'+(p.points_total||0)+'</b>');
   return [['cert','🏆 الشهادات',certH],['quiz','📝 الاختبارات',quizH],['game','🎯 صائد الكلمات',gameH],['act','📈 النشاط',actH],['pts','⭐ النقاط',ptsH]];
 }
 async function mzOpenProfile(phone, own){
@@ -23381,7 +23419,7 @@ function parentPtsHtml(pt, lv, M){
     '<div class="sp-big"><b>' + tot + '</b><small>' + L.emoji + ' ' + esc(L.name) + '</small></div>' +
     '<div class="sp-bar sp-bar-lg"><i style="width:' + pct + '%"></i></div>' +
     '<div class="sp-note" style="margin:6px 0 8px">' + (nx ? 'باقي ' + (nx.min - tot) + ' نقطة للقب «' + esc(nx.name) + '» ' + nx.emoji : 'وصل لأعلى لقب 🎉') + ' • دي رصيده من أول يوم ومحفوظ دايماً</div>' +
-    row('📝','الاختبارات', pt.points_quiz || 0) + row('🎓','الشهادات', pt.points_cert || 0) +
+    row('📝','اختبارات الوحدات', pt.points_quiz || 0, 'أعلى درجة في كل وحدة') + row('🎓','شهادات صائد الكلمات', pt.points_cert || 0, 'مش شهادة الاختبار') +
     row('📅','الحضور', pt.points_attendance || 0) + row('⏱️','وقت المذاكرة', pt.points_time || 0) +
     row('🎯','صائد الكلمات', pt.points_game || 0) + row('🔥','تحدي الأيام', pt.points_streak || 0) + row('🎧','السماع', pt.points_listen || 0) + '</div>';
   if(M){
@@ -23392,7 +23430,7 @@ function parentPtsHtml(pt, lv, M){
     h += '<div class="sp-card sp-m"><div class="sp-h">📅 إنجازه في شهر ' + mn + ' <span class="sp-tag">للوحة الشرف</span></div>' +
       '<div class="sp-big"><b>' + t + '</b><small>نقطة هذا الشهر</small></div>' +
       '<div class="sp-rank">' + (rk ? medal + ' ترتيبه في لوحة الشرف <b>#' + rk + '</b> من ' + n('ranked') : 'لسه ما دخلش لوحة الشرف الشهر ده') + '</div>' +
-      bar('📝','اختبارات الوحدات', n('quiz')) + bar('🎓','الشهادات', n('certs'), n('certs_n') ? n('certs_n') + ' شهادة' : '') +
+      bar('📝','اختبارات الوحدات', n('quiz')) + bar('🎓','شهادات صائد الكلمات', n('certs'), n('certs_n') ? n('certs_n') + ' شهادة' : '') +
       bar('📅','الحضور', n('attendance'), n('days') + ' يوم') + bar('🎯','صائد الكلمات', n('game')) +
       '<div class="sp-note">نقاط الشهر بتبدأ من صفر كل شهر وبتحدد مكانه في لوحة الشرف بس. أما رصيده التراكمي فمحفوظ ومش بيتصفّر.</div></div>';
   }
