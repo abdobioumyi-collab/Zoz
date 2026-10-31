@@ -14442,7 +14442,17 @@ function mzAiBlob(j){
 async function mzHardAiCall(text, unitTitle, stageLabel){
   const stages = (typeof STAGES !== 'undefined' ? STAGES : []).map(s => ({ key: s.key, label: s.label }));
   const br = window.mzaiBridge;
-  const call = br.call({ token: adminToken, text, images: [], unit: unitTitle, stage: stageLabel, stages, all_stages: stages, stats: {} });
+  // المسار السريع: دالة ai-quiz (نص صافي، تفكير أدنى، نداء احتياطي تلقائي). لو فشلت بنرجع للمساعد العادي ai-free.
+  const fastCall = async () => {
+    let ep = ''; try{ ep = localStorage.getItem('mzai_endpoint') || ''; }catch(_){}
+    ep = ep || window.MZAI_ENDPOINT || '';
+    if(!ep) throw new Error('no endpoint');
+    const r = await fetch(ep.replace(/[^\/]+$/, 'ai-quiz'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: adminToken, text }) });
+    const j = await r.json().catch(() => null);
+    if(!r.ok || !j || !j.reply) throw new Error((j && j.error) || ('HTTP ' + r.status));
+    return j;
+  };
+  const call = fastCall().catch(e => { console.warn('ai-quiz فشلت، برجع للمساعد العادي:', e && e.message); return br.call({ token: adminToken, text, images: [], unit: unitTitle, stage: stageLabel, stages, all_stages: stages, stats: {} }); });
   const to = new Promise((_, rej) => setTimeout(() => rej(new Error('المساعد اتأخر أكتر من دقيقتين')), MZ_HARD_CALL_TIMEOUT_MS));
   try{ const j = await Promise.race([call, to]); br.bump(); return j; }
   catch(e){ try{ br.bump(); }catch(_){} throw e; }
