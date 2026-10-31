@@ -3346,8 +3346,14 @@ Reading books helps us learn new things. | قراءة الكتب تساعدنا 
                     <option value="1">مرة واحدة</option>
                     <option value="2">مرتين</option>
                     <option value="3">ثلاث مرات</option>
+                    <option value="5">5 مرات (الافتراضي)</option>
+                    <option value="10">10 مرات</option>
                     <option value="-1">غير محدود</option>
                   </select>
+                </div>
+                <div class="quiz-count-field">
+                  <div class="field-hint" style="margin:0 0 4px;">الفاصل بين المحاولات بالدقايق (0 = من غير فاصل)</div>
+                  <input class="field-input" type="number" min="0" id="examRetryCooldown" placeholder="مثال: 5">
                 </div>
               </div>
               <div class="quiz-count-row">
@@ -3377,10 +3383,19 @@ Reading books helps us learn new things. | قراءة الكتب تساعدنا 
           </div>
 
           <div class="quiz-subpanel" id="quizSub-attempts">
-            <div class="exam-settings-box" style="margin-bottom:14px;border:2px solid var(--teal);">
-              <label class="field-label" style="margin:0;">🔓 فتح محاولة إضافية للجميع (النتائج القديمة تفضل محفوظة)</label>
-              <div class="field-hint" style="margin:0;">هيتم منح كل طالب سبق وامتحن هذا الاختبار محاولة واحدة إضافية فورًا — من غير ما تتمسح نتيجته القديمة. لو امتحن تاني، النتيجتين هيظهروا مع بعض في تبويب "النتائج والشهادات".</div>
-              <button class="btn-small" style="background:var(--teal);align-self:flex-start;" onclick="reopenAllAttemptsKeepResults()"><i class="fa-solid fa-lock-open"></i> فتح محاولة إضافية للجميع</button>
+            <div class="exam-settings-box" style="margin-bottom:14px;border:2px solid var(--gold);">
+              <label class="field-label" style="margin:0;">🎛️ تحكم سريع في محاولات كل الطلاب</label>
+              <div id="quickAttemptsStatus" class="field-hint" style="margin:0;font-weight:800;"></div>
+              <div class="field-hint" style="margin:0;">الاختبار مفتوح لكل الطلاب لحد (الحد الأقصى للمحاولات):</div>
+              <div id="quickCapRow" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+              <div class="field-hint" style="margin:4px 0 0;">إعادة محاولات للجميع (بتتضاف فوق اللي معاهم، وتشمل اللي لسه ماامتحنوش):</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <button class="btn-small" style="background:var(--teal);" onclick="grantAllAttempts(1)">+1 محاولة</button>
+                <button class="btn-small" style="background:var(--teal);" onclick="grantAllAttempts(2)">+2 محاولتين</button>
+                <button class="btn-small" style="background:var(--teal);" onclick="grantAllAttempts(5)">+5 محاولات</button>
+                <button class="btn-small" style="background:var(--ink-soft);" onclick="clearAllGrants()">إلغاء الإضافات</button>
+              </div>
+              <div class="field-hint" style="margin:0;">الدرجة والشهادة بتتحسب دايمًا على أعلى محاولة، مهما كان عدد المحاولات. نتايج الطلاب القديمة بتفضل محفوظة.</div>
             </div>
             <div class="exam-settings-box" style="margin-bottom:14px;">
               <label class="field-label" style="margin:0;">🗑️ إعادة تعيين محاولات جميع الطلاب (مسح كامل)</label>
@@ -4680,8 +4695,11 @@ He --- playing football. | *is | are | am | be"></textarea>
      v_days int := 0; v_minutes int := 0;
    begin
      select coalesce((select points_system_enabled from app_settings where id = 1), true) into v_enabled;
-     select coalesce(sum(round(score::numeric / greatest(total,1) * 10)), 0)::int into v_quiz
-       from quiz_results where student_phone = p_phone;
+     -- أعلى درجة لكل وحدة بس (المحاولات الإضافية ما بتزوّدش النقاط)
+     select coalesce(sum(round(b.best_pct * 10)), 0)::int into v_quiz
+       from (select max(score::numeric / greatest(total,1)) as best_pct
+               from quiz_results where student_phone = p_phone
+               group by coalesce(unit_id::text, unit_title)) b;
      select coalesce(count(*), 0)::int * 50 into v_cert
        from certificate_log where student_phone = p_phone;
      select coalesce(points_attendance_days,0), coalesce(points_study_minutes,0)
@@ -8871,6 +8889,8 @@ async function verifyAdminToken(token){
   return 'error';
 }
 async function adminUpsertRow(table, row){
+  // فتح الاختبار من أي مكان (زرار الإدارة / المساعد الذكي): لو الوحدة مفيهاش أسئلة بتتولّد تلقائيًا الأول
+  if(table === 'units' && row && row.quiz_open === true && row.id) await ensureQuizQuestions(row.id);
   const { data, error } = await _supabase.rpc('admin_upsert_row', { p_token: adminToken, p_table: table, p_row: row });
   if(error) throw error;
   return data;
@@ -9621,7 +9641,7 @@ async function showPointsLedger(phone){
   ]);
   const P = (pR.data && pR.data[0]) || {}, ut = {}; (uR.data||[]).forEach(u => ut[u.id] = u.title);
   const rows = [];
-  (qR.data||[]).forEach(r => rows.push({ at:r.created_at, ic:'📝', t:'اختبار «' + (ut[r.unit_id] || r.unit_title || 'وحدة') + '» — ' + r.score + '/' + r.total, p:Math.round(r.score / Math.max(r.total,1) * 10) }));
+  bestResultsPerUnit(qR.data||[]).forEach(r => rows.push({ at:r.created_at, ic:'📝', t:'اختبار «' + (ut[r.unit_id] || r.unit_title || 'وحدة') + '» — ' + r.score + '/' + r.total, p:Math.round(r.score / Math.max(r.total,1) * 10) }));
   (cR.data||[]).forEach(r => rows.push({ at:r.created_at, ic:'🎓', t:'شهادة: ' + ((CERT_TYPES[r.cert_type]||{}).label || r.cert_type || ''), p:50 }));
   const days = new Set();
   (eR.data||[]).forEach(e => {
@@ -11619,7 +11639,7 @@ async function openStatsHub(){
       _supabase.from('quiz_results').select('student_phone,student_name,stage_key,unit_title,score,total,created_at').then(r=>r).catch(()=>({data:[]}))
     ]);
     statsHubStudents = studentsRes.data || [];
-    statsHubQuizResults = (resultsRes && resultsRes.data) || [];
+    statsHubQuizResults = bestResultsPerUnit((resultsRes && resultsRes.data) || []);
   }catch(e){
     console.error(e);
     listEl.innerHTML = '<div class="empty-note">حدث خطأ في تحميل الإحصائيات</div>';
@@ -11814,7 +11834,7 @@ async function buildStatsSnapshotForAI(){
       _supabase.from('quiz_results').select('student_phone,student_name,stage_key,unit_title,score,total,created_at').then(r=>r).catch(()=>({data:[]}))
     ]);
     const students = studentsRes.data || [];
-    const results = (resultsRes && resultsRes.data) || [];
+    const results = bestResultsPerUnit((resultsRes && resultsRes.data) || []);
     const now = Date.now();
     const { start: monthStart, label: monthLabel } = statsHubMonthBounds();
 
@@ -11985,7 +12005,7 @@ async function openStudentDetail(phone){
       if(!o.best || pc > o.best.pc) o.best = { pc, sc:r.score, tt:r.total };
     });
     const ul = Object.values(byU).sort((a,b) => new Date(b.last) - new Date(a.last));
-    const allP = (qr.data || []).map(r => r.total > 0 ? Math.round(r.score / r.total * 100) : 0);
+    const allP = ul.map(o => o.best.pc);
     const avg = allP.length ? Math.round(allP.reduce((a,b) => a + b, 0) / allP.length) : 0;
     examsHtml = ul.length
       ? `<div class="sd-kpis"><div><b>${(qr.data || []).length}</b><small>محاولة</small></div><div><b>${ul.length}</b><small>وحدة</small></div><div><b>${avg}%</b><small>المتوسط</small></div></div>` +
@@ -12504,6 +12524,7 @@ function subscribeUnitRealtime(unitId){
         currentUnit.exam_start_at = updated.exam_start_at;
         currentUnit.exam_end_at = updated.exam_end_at;
         currentUnit.exam_max_attempts = updated.exam_max_attempts;
+        currentUnit.exam_retry_cooldown_minutes = updated.exam_retry_cooldown_minutes;
         currentUnit.exam_allow_reentry = updated.exam_allow_reentry;
         currentUnit.exam_show_score = updated.exam_show_score;
         currentUnit.exam_show_answers = updated.exam_show_answers;
@@ -12532,16 +12553,23 @@ async function handleQuizBtnClick(){
     return;
   }
   const phone = getEffectiveStudentPhone();
-  let attemptNumber = 1;
+  let attemptNumber = 1, attemptsAllowed = 1;
   {
     const info = await getExamAttemptsInfo(currentUnit.id, myStudent, currentUnit.exam_max_attempts);
     if(info.used >= info.allowed){
-      showToast('🚫 استخدمتي كل محاولاتك المسموحة في الاختبار ده. لو محتاجة تعيديه كلّمي المس عشان تفتحلك محاولة إضافية.');
+      showToast('🚫 استخدمت كل محاولاتك المسموحة في الاختبار ده. درجتك الأعلى هي المحسوبة. لو محتاج محاولة إضافية كلّم المس.');
       return;
     }
+    const cooldownMin = Number(currentUnit.exam_retry_cooldown_minutes) || 0;
+    if(cooldownMin > 0 && info.lastAt){
+      const waitMs = cooldownMin * 60000 - (Date.now() - new Date(info.lastAt).getTime());
+      if(waitMs > 0){ showToast('⏳ استنى ' + Math.ceil(waitMs / 60000) + ' دقيقة قبل المحاولة الجاية'); return; }
+    }
     attemptNumber = info.used + 1;
+    attemptsAllowed = info.allowed;
   }
   examMeta = {
+    attemptsAllowed,
     allowReentry: currentUnit.exam_allow_reentry !== false,
     showScore: currentUnit.exam_show_score !== false,
     showAnswers: currentUnit.exam_show_answers !== false,
@@ -12623,6 +12651,19 @@ function showExamStartScreen(){
       <div class="exam-start-stat-value">${s.value}</div>
       <div class="exam-start-stat-label">${s.label}</div>
     </div>`).join('');
+
+  const statsEl = document.getElementById('examStartStats');
+  let attNote = document.getElementById('examAttemptNote');
+  if(!attNote){
+    attNote = document.createElement('div'); attNote.id = 'examAttemptNote';
+    attNote.style.cssText = 'width:100%;margin:-10px 0 18px;padding:10px 14px;border-radius:14px;background:var(--glass-bg);border:1.5px solid var(--line);font-size:.8rem;font-weight:800;color:var(--ink-soft);line-height:1.8;';
+    statsEl.parentNode.insertBefore(attNote, statsEl.nextSibling);
+  }
+  if(examMeta && examMeta.attemptNumber){
+    const allowedTxt = (examMeta.attemptsAllowed === Infinity || !examMeta.attemptsAllowed) ? '' : ' من ' + examMeta.attemptsAllowed;
+    attNote.innerHTML = `🔁 المحاولة رقم ${examMeta.attemptNumber}${allowedTxt}<br>💡 ارتاح ومتقلقش — بنحسب <b>أعلى درجة</b> ليك بس، وأي محاولة أقل عمرها ما بتنقّص درجتك`;
+    attNote.style.display = 'block';
+  } else { attNote.style.display = 'none'; }
 
   const nameWrap = document.getElementById('certNameFieldWrap');
   const needsCertName = !(myStudent && myStudent.name_en && isEnglishName(myStudent.name_en));
@@ -12975,15 +13016,48 @@ async function finishQuiz(reason){
   const stageLabel = ctx.stageLabel || (STAGES.find(s => s.key === currentStage) || {}).label || currentStage || '';
   const unitTitle = ctx.unitTitle || currentUnit.title || ('Unit ' + currentUnit.unit_number);
   const studentNameEn = ctx.studentNameEn || (myStudent ? (myStudent.name_en || '') : '') || (ctx.studentName || (myStudent ? myStudent.name : '') || 'Student');
-  const certId = 'CERT-' + (currentUnit && currentUnit.unit_number ? 'U' + currentUnit.unit_number : 'X') + '-' + String(Date.now()).slice(-6) + '-' + new Date().getFullYear();
+  /* ---- أعلى درجة + شهادة واحدة لكل وحدة ----
+     بنجيب محاولات الطالب السابقة في نفس الوحدة: رقم الشهادة ثابت (من أول محاولة)،
+     والشهادة والتقييم بيتحسبوا على أعلى درجة بين كل المحاولات. */
+  let prevRows = [];
+  try{
+    const { data: prevData } = await _supabase.from('quiz_results').select('score,total,cert_id,created_at')
+      .eq('unit_id', currentUnitId).eq('student_phone', getEffectiveStudentPhone());
+    prevRows = prevData || [];
+  }catch(e){ console.warn('prev attempts lookup failed', e); }
+  prevRows.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+  const prevWithCert = prevRows.find(r => r.cert_id);
+  const certId = prevWithCert ? prevWithCert.cert_id
+    : 'CERT-' + (currentUnit && currentUnit.unit_number ? 'U' + currentUnit.unit_number : 'X') + '-' + String(Date.now()).slice(-6) + '-' + new Date().getFullYear();
+  let bestScore = score, bestTotal = total, bestPercent = percent, prevBestPercent = -1;
+  prevRows.forEach(r => {
+    const pr = resultPercentRaw(r);
+    if(pr > prevBestPercent) prevBestPercent = pr;
+    if(pr > bestPercent){ bestScore = r.score; bestTotal = r.total; bestPercent = Math.round(pr); }
+  });
+  const isNewBest = !prevRows.length || percent > prevBestPercent;
 
-  const eligible = isCertEligible(percent);
+  let bestNote = document.getElementById('bestScoreNote');
+  if(!bestNote){
+    bestNote = document.createElement('div'); bestNote.id = 'bestScoreNote';
+    bestNote.style.cssText = 'margin:10px auto 0;max-width:420px;padding:10px 14px;border-radius:14px;background:var(--glass-bg);border:1.5px solid var(--line);font-size:.82rem;font-weight:800;color:var(--ink);line-height:1.8;text-align:center;';
+    scoreBadge.parentNode.insertBefore(bestNote, scoreBadge.nextSibling);
+  }
+  if(prevRows.length){
+    bestNote.style.display = 'block';
+    if(isNewBest) bestNote.innerText = '🎉 دي أعلى درجة ليك لحد دلوقتي — اتحدّثت درجتك وشهادتك';
+    else bestNote.innerText = showScore
+      ? `⭐ درجتك المحسوبة: ${bestScore} / ${bestTotal} (أعلى محاولة) — المحاولة دي ما غيّرتش التقييم`
+      : '⭐ المحاولة دي ما غيّرتش تقييمك — الدرجة الأعلى هي المحسوبة';
+  } else { bestNote.style.display = 'none'; }
+
+  const eligible = isCertEligible(bestPercent);
   const canvas = document.getElementById('certCanvas');
   const dlGroup = document.getElementById('certDownloadGroup');
   const notEligibleNote = document.getElementById('certNotEligibleNote');
   if(eligible){
     canvas.style.display = 'block'; dlGroup.style.display = 'flex'; notEligibleNote.style.display = 'none';
-    drawCertificate(studentNameEn, stageLabel, unitTitle, score, total, percent, certId);
+    drawCertificate(studentNameEn, stageLabel, unitTitle, bestScore, bestTotal, bestPercent, certId);
   } else {
     canvas.style.display = 'none'; dlGroup.style.display = 'none'; notEligibleNote.style.display = 'block';
   }
@@ -13858,15 +13932,20 @@ async function loadAdminQuizUnits(){
   document.getElementById('examDuration').value = unit.exam_duration_minutes ?? '';
   document.getElementById('examStartAt').value = unit.exam_start_at ? toLocalDatetimeValue(unit.exam_start_at) : '';
   document.getElementById('examEndAt').value = unit.exam_end_at ? toLocalDatetimeValue(unit.exam_end_at) : '';
-  document.getElementById('examMaxAttempts').value = String(unit.exam_max_attempts && unit.exam_max_attempts !== 0 ? unit.exam_max_attempts : 1);
+  document.getElementById('examRetryCooldown').value = String(unit.exam_retry_cooldown_minutes || 0);
+  document.getElementById('examMaxAttempts').value = String(unit.exam_max_attempts && unit.exam_max_attempts !== 0 ? unit.exam_max_attempts : EXAM_DEFAULT_MAX_ATTEMPTS);
   document.getElementById('examAllowReentry').checked = unit.exam_allow_reentry !== false;
   document.getElementById('examShowScore').checked = unit.exam_show_score !== false;
   document.getElementById('examShowAnswers').checked = unit.exam_show_answers !== false;
   const rsr = document.getElementById('reopenSearchResults'); if(rsr) rsr.innerHTML = '';
   const rsi = document.getElementById('reopenSearchInput'); if(rsi) rsi.value = '';
   switchQuizSubTab('status');
+  renderQuickAttempts(unit);
 
-  const questions = await fetchQuizQuestions(adminSelectedUnitId, true);
+  let questions = await fetchQuizQuestions(adminSelectedUnitId, true);
+  if(unit.quiz_open && !questions.length){
+    try{ await ensureQuizQuestions(adminSelectedUnitId); questions = await fetchQuizQuestions(adminSelectedUnitId, true); }catch(e){ /* الوحدة مفيهاش كلمات — الرسالة اتعرضت */ }
+  }
   document.getElementById('unifiedQuizEditorInput').value = questionsToEditorText(questions);
   renderQuestionBankList();
 }
@@ -13878,7 +13957,8 @@ async function toggleQuizOpen(checked){
     const unitLabel = (unitInfo && (unitInfo.title || ('Unit ' + unitInfo.unit_number))) || adminSelectedUnitId;
     await adminUpsertRow('units', { id: adminSelectedUnitId, quiz_open: checked });
     document.getElementById('quizOpenLabel').innerText = checked ? 'الاختبار متاح للطلاب الآن ✅' : 'الاختبار مقفول أمام الطلاب 🔒';
-    showToast(checked ? '🔓 الاختبار اتفتح للطلاب لحظيًا' : '🔒 الاختبار اتقفل');
+    const autoN = window.__autoGenCount || 0; window.__autoGenCount = 0;
+    showToast(checked ? ('🔓 الاختبار اتفتح للطلاب لحظيًا' + (autoN ? ` — وولّدت ${autoN} سؤال تلقائيًا من كلمات الوحدة ✨` : '')) : '🔒 الاختبار اتقفل');
     logAdminActivity(checked ? 'quiz_open' : 'quiz_close', `${checked ? 'فتح' : 'قفل'} اختبار وحدة "${unitLabel}"`);
     delete unitsCache[adminSelectedStage];
     await loadAdminQuizUnits();
@@ -13928,6 +14008,7 @@ async function saveExamSettings(){
     exam_start_at: startVal ? new Date(startVal).toISOString() : null,
     exam_end_at: endVal ? new Date(endVal).toISOString() : null,
     exam_max_attempts: parseInt(document.getElementById('examMaxAttempts').value, 10),
+    exam_retry_cooldown_minutes: Math.max(0, parseInt(document.getElementById('examRetryCooldown').value, 10) || 0),
     exam_allow_reentry: document.getElementById('examAllowReentry').checked,
     exam_show_score: document.getElementById('examShowScore').checked,
     exam_show_answers: document.getElementById('examShowAnswers').checked,
@@ -13959,15 +14040,41 @@ function isStudentEligibleForExam(unit, student){
 /* base attempts allowed comes from the unit's exam_max_attempts setting:
    -1 = unlimited, missing/0/null (legacy rows) falls back to 1 for
    backward compatibility with the original one-attempt-only behavior. */
+/* الامتحان بيفضل مفتوح قدام الطالب لحد حد أقصى للمحاولات (الافتراضي 5)،
+   لكن التقييم والشهادة بيتحسبوا مرة واحدة بس على أعلى درجة. */
+const EXAM_DEFAULT_MAX_ATTEMPTS = 5;
+
 function baseAttemptsFromUnit(maxAttempts){
   if(maxAttempts === -1) return Infinity;
   if(maxAttempts && maxAttempts > 0) return maxAttempts;
-  return 1;
+  return EXAM_DEFAULT_MAX_ATTEMPTS;
+}
+
+function resultPercentRaw(r){ return r && r.total ? (r.score / r.total) * 100 : 0; }
+
+/* بيرجّع صف واحد بس لكل (طالب + وحدة) = أعلى درجة. كل المحاولات بتفضل
+   متسجّلة في quiz_results، لكن كل العرض والإحصاء بيعدّي من هنا.
+   attempts_count = عدد المحاولات، وcert_id = رقم شهادة المحاولة الأولى (ثابت). */
+function bestResultsPerUnit(rows){
+  const map = new Map();
+  (rows || []).forEach(r => {
+    const k = (r.student_phone || '') + '|' + (r.unit_id != null ? r.unit_id : (r.unit_title || ''));
+    let g = map.get(k);
+    if(!g){ g = { best:r, first:r, n:0 }; map.set(k, g); }
+    g.n++;
+    const pr = resultPercentRaw(r), pb = resultPercentRaw(g.best);
+    const tr = new Date(r.created_at || 0).getTime(), tb = new Date(g.best.created_at || 0).getTime();
+    if(pr > pb || (pr === pb && tr < tb)) g.best = r;
+    if(tr < new Date(g.first.created_at || 0).getTime()) g.first = r;
+  });
+  return Array.from(map.values())
+    .map(g => Object.assign({}, g.best, { attempts_count:g.n, cert_id: g.first.cert_id || g.best.cert_id }))
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 }
 
 async function getExamAttemptsInfo(unitId, student, maxAttemptsOverride){
   const phone = (student && student.phone) ? student.phone : getEffectiveStudentPhone();
-  let used = 0;
+  let used = 0, lastAt = null;
   let maxAttempts = maxAttemptsOverride;
   try{
     if(maxAttempts === undefined || maxAttempts === null){
@@ -13978,14 +14085,21 @@ async function getExamAttemptsInfo(unitId, student, maxAttemptsOverride){
     const { count: usedCount } = await _supabase.from('quiz_results')
       .select('id', { count:'exact', head:true }).eq('unit_id', unitId).eq('student_phone', phone);
     used = usedCount || 0;
+    if(used > 0){
+      const { data: lastRow } = await _supabase.from('quiz_results').select('created_at')
+        .eq('unit_id', unitId).eq('student_phone', phone).order('created_at', { ascending:false }).limit(1);
+      if(lastRow && lastRow[0]) lastAt = lastRow[0].created_at;
+    }
     let allowed = base;
     if(base !== Infinity){
       const { count: studentReopens } = await _supabase.from('exam_reopens')
         .select('id', { count:'exact', head:true }).eq('unit_id', unitId).eq('scope', 'student').eq('student_phone', phone);
-      allowed = base + (studentReopens || 0);
+      const { count: allReopens } = await _supabase.from('exam_reopens')
+        .select('id', { count:'exact', head:true }).eq('unit_id', unitId).eq('scope', 'all');
+      allowed = base + (studentReopens || 0) + (allReopens || 0);
     }
-    return { used, allowed, phone };
-  }catch(e){ console.error(e); return { used: 0, allowed: 1, phone }; }
+    return { used, allowed, phone, lastAt };
+  }catch(e){ console.error(e); return { used: 0, allowed: EXAM_DEFAULT_MAX_ATTEMPTS, phone, lastAt:null }; }
 }
 
 /* Every student who has at least one saved result for this unit — used to
@@ -14071,6 +14185,61 @@ async function adjustStudentAttempt(phone, delta){
    attempt to every student who already has a saved result for this unit,
    WITHOUT deleting anything from quiz_results. If a student retakes the
    exam, both attempts stay visible side by side in النتائج والشهادات. */
+const QUICK_CAPS = [[1,'مرة'],[2,'مرتين'],[3,'3'],[5,'5'],[10,'10'],[-1,'♾️ دائم']];
+async function renderQuickAttempts(unit){
+  const row = document.getElementById('quickCapRow'), st = document.getElementById('quickAttemptsStatus');
+  if(!row || !unit) return;
+  const cap = unit.exam_max_attempts === -1 ? -1 : (unit.exam_max_attempts > 0 ? unit.exam_max_attempts : EXAM_DEFAULT_MAX_ATTEMPTS);
+  row.innerHTML = QUICK_CAPS.map(([v, l]) =>
+    `<button class="btn-small" style="background:${v === cap ? 'var(--gold-deep,#b8860b)' : 'var(--glass-bg)'};color:${v === cap ? '#fff' : 'var(--ink)'};border:1.5px solid var(--line);" onclick="setAllAttemptsCap(${v})">${l}</button>`).join('');
+  try{
+    const { count } = await _supabase.from('exam_reopens').select('id', { count:'exact', head:true }).eq('unit_id', unit.id).eq('scope', 'all');
+    const extra = count || 0;
+    st.innerText = cap === -1 ? '♾️ الحالي: محاولات غير محدودة لكل الطلاب'
+      : `الحالي: ${cap}${extra ? ' + ' + extra + ' إضافية' : ''} — يعني ${cap + extra} في المجموع لكل طالب`;
+  }catch(e){ st.innerText = ''; }
+}
+
+async function setAllAttemptsCap(cap){
+  if(!adminSelectedUnitId){ showToast('اختار الوحدة الأول'); return; }
+  try{
+    await adminUpsertRow('units', { id: adminSelectedUnitId, exam_max_attempts: cap });
+    if(adminSelectedUnitObj) adminSelectedUnitObj.exam_max_attempts = cap;
+    delete unitsCache[adminSelectedStage];
+    document.getElementById('examMaxAttempts').value = String(cap);
+    showToast(cap === -1 ? '♾️ الاختبار مفتوح لكل الطلاب من غير حد' : `✅ كل الطلاب ليهم دلوقتي ${cap === 1 ? 'محاولة واحدة' : cap === 2 ? 'محاولتين' : cap + ' محاولات'}`);
+    try{ logAdminActivity('exam_attempts_cap', `ضبط محاولات اختبار الوحدة لكل الطلاب: ${cap === -1 ? 'غير محدود' : cap}`); }catch(e){}
+    renderQuickAttempts(adminSelectedUnitObj);
+    renderReopenAttemptsList((document.getElementById('reopenSearchInput').value || '').trim());
+  }catch(e){ console.error(e); showToast('❌ حصل خطأ في حفظ عدد المحاولات'); }
+}
+
+async function grantAllAttempts(n){
+  if(!adminSelectedUnitId){ showToast('اختار الوحدة الأول'); return; }
+  if(adminSelectedUnitObj && adminSelectedUnitObj.exam_max_attempts === -1){ showToast('الاختبار أصلًا مفتوح من غير حد ♾️'); return; }
+  try{
+    const rows = Array.from({ length:n }, () => ({ unit_id: adminSelectedUnitId, scope:'all' }));
+    const { error } = await _supabase.from('exam_reopens').insert(rows);
+    if(error) throw error;
+    showToast(`✅ اتضافت ${n === 1 ? 'محاولة' : n === 2 ? 'محاولتين' : n + ' محاولات'} لكل الطلاب`);
+    try{ logAdminActivity('exam_grant_all', `إضافة ${n} محاولة لكل الطلاب في اختبار الوحدة`); }catch(e){}
+    renderQuickAttempts(adminSelectedUnitObj);
+    renderReopenAttemptsList((document.getElementById('reopenSearchInput').value || '').trim());
+  }catch(e){ console.error(e); showToast('❌ حصل خطأ في إضافة المحاولات'); }
+}
+
+async function clearAllGrants(){
+  if(!adminSelectedUnitId) return;
+  if(!confirm('هيتم إلغاء كل المحاولات الإضافية الجماعية لهذه الوحدة (النتايج القديمة مش هتتمسح). متأكد؟')) return;
+  try{
+    const { error } = await _supabase.from('exam_reopens').delete().eq('unit_id', adminSelectedUnitId).eq('scope', 'all');
+    if(error) throw error;
+    showToast('✅ اتلغت الإضافات الجماعية');
+    renderQuickAttempts(adminSelectedUnitObj);
+    renderReopenAttemptsList((document.getElementById('reopenSearchInput').value || '').trim());
+  }catch(e){ console.error(e); showToast('❌ حصل خطأ'); }
+}
+
 async function reopenAllAttemptsKeepResults(){
   if(!adminSelectedUnitId){ showToast('اختاري الوحدة الأول'); return; }
   try{
@@ -14235,6 +14404,36 @@ function pickWordQuestionLine(w, pool){
    using a mix of question shapes (see templates above) instead of one fixed
    phrasing — leaving the "# أسئلة الجرامر" section (and anything else the
    admin wrote) untouched. Nothing is saved until "حفظ كل الأسئلة" is pressed. */
+/* ============================================================
+   توليد تلقائي عند فتح الاختبار: لو الوحدة مفيهاش أي أسئلة، بنولّد أسئلة كلمات
+   من مفرداتها (نفس قوالب المولّد العادي) ونحفظها فورًا، وبعدين الاختبار يتفتح.
+   لو الوحدة فيها أسئلة أصلًا ما بنلمسهاش. الأسئلة الأصعب لسه من زرار المولّد الذكي.
+============================================================ */
+async function ensureQuizQuestions(unitId){
+  // عدّ مباشر من الداتابيز: لو فشل التأكد نوقف، عشان ما نستبدلش أسئلة موجودة بالغلط
+  const { count: qCount, error: qErr } = await _supabase.from('quiz_questions').select('id', { count:'exact', head:true }).eq('unit_id', unitId);
+  if(qErr) throw new Error('مقدرتش أتأكد من أسئلة الوحدة (مشكلة اتصال) — جرّب تاني');
+  if(qCount > 0) return { generated: 0 };
+  const words = (await fetchWords(unitId, true)).filter(w => (w.item_type || 'word') === 'word' && w.word_en && w.word_ar);
+  if(!words.length){
+    const msg = 'الوحدة دي مفيهاش كلمات ولا أسئلة أصلًا، فمفيش حاجة أولّد منها — ضيف كلمات للوحدة وهتتولّد الأسئلة لوحدها';
+    showToast('⚠️ ' + msg, 9000);
+    throw new Error(msg);
+  }
+  const picked = shuffleArray(words).slice(0, 60);
+  const items = picked.map((w, i) => {
+    const parts = pickWordQuestionLine(w, words).split('|').map(p => p.trim()).filter(Boolean);
+    const choices = []; let correct_index = 0;
+    parts.slice(1).forEach((c, ci) => { if(c.startsWith('*')){ correct_index = ci; choices.push(c.substring(1).trim()); } else choices.push(c); });
+    return { unit_id: unitId, question_text: parts[0], choices, correct_index, correct_order: null, passage_text: null, question_type: 'word', points: 1, order_index: i };
+  }).filter(q => q.question_text && q.choices.length >= 2);
+  await adminReplaceUnitContent('quiz_questions', unitId, items);
+  await fetchQuizQuestions(unitId, true);
+  window.__autoGenCount = items.length;
+  showToast('✨ الوحدة مكانش فيها أسئلة — ولّدت ' + items.length + ' سؤال تلقائيًا من كلماتها');
+  return { generated: items.length };
+}
+
 async function regenerateWordQuestionsBasic(){
   if(!adminSelectedUnitId) return;
   const words = (await fetchWords(adminSelectedUnitId, true)).filter(w => (w.item_type || 'word') === 'word' && w.word_ar);
@@ -14466,6 +14665,7 @@ async function saveUnifiedQuizEditor(){
    ADMIN — RESULTS DASHBOARD TAB (with live search filter)
 ============================================================ */
 let resultsDataCache = [];
+let resultsAllRows = []; // كل المحاولات الخام (للتفاصيل)
 const RESULTS_PASS_PERCENT = 50; // used only for the pass/fail status column
 
 /* phone -> {phone, name, name_en} for every currently-registered student —
@@ -14525,7 +14725,8 @@ async function renderAdminResultsTab(){
   if(stageKey) query = query.eq('stage_key', stageKey);
   if(unitSel.value) query = query.eq('unit_id', unitSel.value);
   const [{ data, error }] = await Promise.all([query, loadResultsStudentsMap()]);
-  resultsDataCache = (!error && data) ? data : [];
+  resultsAllRows = (!error && data) ? data : [];
+  resultsDataCache = bestResultsPerUnit(resultsAllRows);
   const searchInput = document.getElementById('resultsSearchInput');
   if(searchInput) searchInput.value = '';
   renderResultsRows(resultsDataCache);
@@ -14551,7 +14752,7 @@ function renderResultsRows(rows){
     const verify = getResultVerification(r);
     const verifyCell = `<span style="color:${verify.color};font-weight:800;font-size:.78rem;" title="${escapeHtml(verify.detail)}">${verify.label}</span>`;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${escapeHtml(r.student_name || '-')}</td><td>${phoneCell}</td><td>${verifyCell}</td><td>${r.unit_title || '-'}</td><td>${r.score}/${r.total}</td><td>${percent}%</td><td>${statusBadge}</td><td>${dateStr}</td>
+    tr.innerHTML = `<td>${escapeHtml(r.student_name || '-')}</td><td>${phoneCell}</td><td>${verifyCell}</td><td>${r.unit_title || '-'}${r.attempts_count > 1 ? ` <small style="color:var(--ink-soft);font-weight:800;">(${r.attempts_count} محاولات)</small>` : ''}</td><td>${r.score}/${r.total}</td><td>${percent}%</td><td>${statusBadge}</td><td>${dateStr}</td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap;">
           <button class="btn-small" style="padding:5px 9px;background:var(--glass-bg);color:var(--ink);" onclick="viewResultDetail(${i})" title="عرض النتيجة"><i class="fa-solid fa-eye"></i></button>
@@ -14607,7 +14808,18 @@ function viewResultDetail(index){
       <div style="color:${verify.color};">🔎 ${verify.label} — ${escapeHtml(verify.detail)}</div>
       <div>🏫 الصف: ${escapeHtml(stageLabel)}</div>
       <div>📘 الاختبار: ${escapeHtml(r.unit_title || '-')}</div>
-      <div>🎯 الدرجة: ${r.score} / ${r.total} (${percent}%)</div>
+      <div>🎯 الدرجة المحسوبة (الأعلى): ${r.score} / ${r.total} (${percent}%)</div>
+      ${(() => {
+        const all = resultsAllRows.filter(x => x.student_phone === r.student_phone && (r.unit_id != null ? x.unit_id === r.unit_id : x.unit_title === r.unit_title))
+          .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+        if(all.length < 2) return '';
+        return `<div style="border-top:1px dashed var(--line);padding-top:8px;">🔁 كل المحاولات (${all.length}):` + all.map((x, n) => {
+          const px = x.total ? Math.round(x.score / x.total * 100) : 0;
+          const best = x.id === r.id ? ' ⭐' : '';
+          const why = x.ended_reason && x.ended_reason !== 'completed' ? ` — ${escapeHtml(x.ended_reason)}` : '';
+          return `<div style="font-weight:700;font-size:.8rem;">${n + 1}) ${x.score}/${x.total} (${px}%) • ${new Date(x.created_at).toLocaleString('ar-EG')}${why}${best}</div>`;
+        }).join('') + '</div>';
+      })()}
       <div>${passed ? '<span style="color:#0d8f5b;">✅ ناجح</span>' : '<span style="color:var(--danger);">❌ راسب</span>'}</div>
       <div>📅 التاريخ: ${dateStr}</div>
     </div>`;
@@ -15341,7 +15553,7 @@ async function hxShowMyCerts(){
       _supabase.from('quiz_results').select('*').eq('student_phone', phone).order('created_at', { ascending:false }),
       _supabase.from('certificate_log').select('*').eq('student_phone', phone).order('created_at', { ascending:false })
     ]);
-    hxMyRes = (a.data || []).filter(r => r.cert_id && r.total && isCertEligible(Math.round(r.score / r.total * 100)));
+    hxMyRes = bestResultsPerUnit(a.data || []).filter(r => r.cert_id && r.total && isCertEligible(Math.round(r.score / r.total * 100)));
     hxMyLog = b.data || [];
   }catch(e){ hxMyRes = []; hxMyLog = []; }
   const dt = x => x ? new Date(x).toLocaleDateString('ar-EG') : '';
@@ -21714,7 +21926,7 @@ async function pfLoad(phone){
     Q(()=>_supabase.from('certificate_log').select('*').eq('student_phone',phone).order('created_at',{ascending:false})),
     Q(()=>_supabase.from('student_events').select('event_type,meta,created_at').eq('phone',phone).order('created_at',{ascending:false}).limit(500))
   ]);
-  return { s: st||{phone}, p: pts||{}, quiz: quiz||[], certs: certs||[], ev: ev||[] };
+  return { s: st||{phone}, p: pts||{}, quiz: bestResultsPerUnit(quiz||[]), certs: certs||[], ev: ev||[] };
 }
 function pfTabs(D, own){
   const { p, quiz, certs, ev } = D;
