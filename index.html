@@ -3481,7 +3481,7 @@ Reading books helps us learn new things. | قراءة الكتب تساعدنا 
               العناوين <b># أسئلة الكلمات</b> و <b># أسئلة الجرامر</b> بتتحط تلقائيًا لتقسيم الأسئلة عند التوليد — سيبها زي ما هي عشان العدّاد يعرف يفرّق بين النوعين.
             </div>
             <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-              <button type="button" class="btn-small" style="background:var(--teal);" onclick="regenerateWordQuestions()"><i class="fa-solid fa-wand-magic-sparkles"></i> ولّد أسئلة صعبة (50 في الدفعة)</button>
+              <button type="button" class="btn-small" style="background:var(--teal);" onclick="regenerateWordQuestions()"><i class="fa-solid fa-wand-magic-sparkles"></i> ولّد 25 سؤال صعب</button>
               <button type="button" class="btn-small" style="background:var(--gold-deep,#b8860b);" onclick="mzBulkReplaceEasy()"><i class="fa-solid fa-arrows-rotate"></i> بدّل كل الأسئلة السهلة بصعبة</button>
               <button type="button" class="btn-small" style="background:var(--purple);" onclick="toggleEditorSize('unifiedQuizEditorInput')"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> تكبير/تصغير المحرر</button>
             </div>
@@ -14347,10 +14347,10 @@ function escapeRegExpLiteral(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
    • إطار تحميل واضح بيورّيك كل خطوة، ومفيش رجوع للتوليد البسيط أبدًا.
    • الاختبار نفسه بيسحب أسئلته عشوائي من الأسئلة المحفوظة (زي ما كان).
 ============================================================ */
-const MZ_HARD_BATCH = 50;          // كلمات في الدفعة الواحدة = 50 سؤال صعب في كل توليد
-const MZ_HARD_MIN_Q = 50;          // أقل عدد أسئلة في التوليد الواحد (لو الوحدة كلماتها أقل، بنعمل سؤالين لبعض الكلمات)
-const MZ_HARD_MAX_WORDS = 150;     // أقصى عدد كلمات بتتولّد لها أسئلة للوحدة الواحدة (بيحمي الحد اليومي للمساعد)
-const MZ_HARD_CALL_TIMEOUT_MS = 180000;
+const MZ_HARD_BATCH = 25;          // كلمات في الدفعة الواحدة = 25 سؤال صعب في كل توليد (50 كانت بتتقطع عند حد الدالة 100 ثانية)
+const MZ_HARD_MIN_Q = 25;          // أقل عدد أسئلة في التوليد الواحد (لو الوحدة كلماتها أقل، بنعمل سؤالين لبعض الكلمات)
+const MZ_HARD_MAX_WORDS = 25;      // أقصى عدد أسئلة صعبة في التوليد الواحد = 25 (نداء واحد للمساعد = سريع ومش بيتقطع)
+const MZ_HARD_CALL_TIMEOUT_MS = 120000;
 let _hardGenBusy = false;
 
 const MZ_EASY_Q_RE = [/^what does .* mean/i, /^أي كلمة إنجليزية معناها/, /^في الجملة:.*معناها/, /^complete the sentence:/i];
@@ -14440,7 +14440,7 @@ async function mzHardAiCall(text, unitTitle, stageLabel){
   const stages = (typeof STAGES !== 'undefined' ? STAGES : []).map(s => ({ key: s.key, label: s.label }));
   const br = window.mzaiBridge;
   const call = br.call({ token: adminToken, text, images: [], unit: unitTitle, stage: stageLabel, stages, all_stages: stages, stats: {} });
-  const to = new Promise((_, rej) => setTimeout(() => rej(new Error('المساعد اتأخر أكتر من 3 دقايق')), MZ_HARD_CALL_TIMEOUT_MS));
+  const to = new Promise((_, rej) => setTimeout(() => rej(new Error('المساعد اتأخر أكتر من دقيقتين')), MZ_HARD_CALL_TIMEOUT_MS));
   try{ const j = await Promise.race([call, to]); br.bump(); return j; }
   catch(e){ try{ br.bump(); }catch(_){} throw e; }
 }
@@ -14554,7 +14554,7 @@ async function ensureQuizQuestions(unitId){
   const unitTitle = (u && u.title) || ('Unit ' + ((u && u.unit_number) || ''));
   const stageLabel = ((typeof STAGES !== 'undefined' ? STAGES : []).find(s => s.key === (u && u.stage_key)) || {}).label || (u && u.stage_key) || '';
   const frame = mzGenFrame('توليد أسئلة صعبة — ' + unitTitle);
-  frame.status('الوحدة مفيهاش أسئلة — بولّد أسئلة صعبة (' + MZ_HARD_BATCH + ' سؤال في كل دفعة) قبل ما أفتح الاختبار…');
+  frame.status('الوحدة مفيهاش أسئلة — بولّد أسئلة صعبة (' + MZ_HARD_BATCH + ' سؤال في نداء واحد) قبل ما أفتح الاختبار…');
   let r;
   try{ r = await mzHardGenerate({ words, unitTitle, stageLabel, frame }); }
   catch(e){ console.error(e); r = { items: [], covered: 0, total: 0, error: (e && e.message) || 'خطأ غير متوقع' }; }
@@ -14582,7 +14582,7 @@ async function regenerateWordQuestions(){
   const unitTitle = unit.title || ('Unit ' + (unit.unit_number || ''));
   _hardGenBusy = true;
   const frame = mzGenFrame('توليد أسئلة صعبة — ' + unitTitle);
-  frame.status('بولّد أسئلة صعبة — ' + MZ_HARD_BATCH + ' سؤال في كل دفعة (' + Math.min(words.length, MZ_HARD_MAX_WORDS) + ' كلمة)…');
+  frame.status('بولّد أسئلة صعبة — ' + MZ_HARD_BATCH + ' سؤال في نداء واحد (' + Math.min(words.length, MZ_HARD_MAX_WORDS) + ' كلمة)…');
   try{
     const r = await mzHardGenerate({ words, unitTitle, stageLabel, frame });
     if(!r.items.length){ frame.finish(false, 'ما اتولّدش أي سؤال — ' + (r.error || 'جرّب تاني')); return; }
