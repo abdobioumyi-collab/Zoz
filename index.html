@@ -14351,6 +14351,9 @@ const MZ_HARD_BATCH = 25;          // كلمات في الدفعة الواحد�
 const MZ_HARD_MIN_Q = 25;          // أقل عدد أسئلة في التوليد الواحد (لو الوحدة كلماتها أقل، بنعمل سؤالين لبعض الكلمات)
 const MZ_HARD_MAX_WORDS = 25;      // أقصى عدد أسئلة صعبة في التوليد الواحد = 25 (نداء واحد للمساعد = سريع ومش بيتقطع)
 const MZ_HARD_CALL_TIMEOUT_MS = 120000;
+const MZ_HARD_PARALLEL = 3;        // عدد النداءات المتوازية للتوليد (الـ 25 سؤال بيتقسموا عليها) — أسرع بكتير من نداء واحد كبير
+const MZ_HARD_VERIFY = false;      // نداء تحقق إضافي (بيضيف ~دقيقة) — مقفول للسرعة، والأسئلة بتتراجع في المحرر قبل الحفظ
+const MZ_HARD_COMPENSATE = false;  // نداء تعويض للكلمات الناقصة (بيضيف نداء كامل) — مقفول للسرعة
 let _hardGenBusy = false;
 
 const MZ_EASY_Q_RE = [/^what does .* mean/i, /^أي كلمة إنجليزية معناها/, /^في الجملة:.*معناها/, /^complete the sentence:/i];
@@ -14458,6 +14461,7 @@ async function mzHardGenerate({ words, unitTitle, stageLabel, frame, maxWords })
 
   const verify = async (chunk, label) => {
     if(!chunk.length) return;
+    if(!MZ_HARD_VERIFY){ chunk.forEach(x => accepted.push(x)); return; }
     if(rem() < 1){ out.unverified = true; chunk.forEach(x => accepted.push(x)); frame.log('⚠️ الحد اليومي خلص — ' + chunk.length + ' سؤال من غير تحقق'); return; }
     frame.busy('بتأكد إن كل سؤال من الـ ' + chunk.length + ' ليه إجابة واحدة بس');
     const prepared = chunk.map(x => { const order = shuffleArray([0, 1, 2, 3]); return { x, shown: order.map(i => x.choices[i]), correctShown: order.indexOf(x.correct) + 1 }; });
@@ -14480,7 +14484,7 @@ async function mzHardGenerate({ words, unitTitle, stageLabel, frame, maxWords })
   const perWord = {};
   const minQ = list.length < MZ_HARD_MIN_Q ? MZ_HARD_MIN_Q : 0;
   const runBatch = async (batch, tag) => {
-    const target = Math.max(batch.length, minQ);
+    const target = Math.max(batch.length, minQ ? Math.ceil(batch.length * minQ / list.length) : 0);
     const text = mzBuildHardWordsPrompt(stageLabel, unitTitle, batch, target);
     let parsed = null, lastErr = null;
     for(let attempt = 0; attempt < 2 && !parsed; attempt++){
@@ -14502,26 +14506,28 @@ async function mzHardGenerate({ words, unitTitle, stageLabel, frame, maxWords })
   };
 
   const doPass = async (pool, passLabel) => {
-    const nB = Math.ceil(pool.length / MZ_HARD_BATCH);
-    for(let b = 0; b < nB; b++){
-      if(frame.cancelled){ out.stopped = 'cancel'; return; }
-      if(rem() < 2){ out.stopped = 'quota'; return; }
-      const batch = pool.slice(b * MZ_HARD_BATCH, (b + 1) * MZ_HARD_BATCH);
-      frame.progress(covered.size + batch.length * 0.5, list.length, covered.size + ' / ' + list.length + ' كلمة');
-      frame.busy(passLabel + ' — دفعة ' + (b + 1) + ' من ' + nB + ': المساعد بيكتب ' + Math.max(batch.length, minQ) + ' سؤال صعب');
+    if(frame.cancelled){ out.stopped = 'cancel'; return; }
+    if(rem() < 1){ out.stopped = 'quota'; return; }
+    // نقسم الكلمات على نداءات متوازية (كل واحد بيكتب جزء) بدل نداء واحد كبير بياخد دقايق
+    const n = Math.max(1, Math.min(MZ_HARD_PARALLEL, Math.ceil(rem()), pool.length));
+    const size = Math.ceil(pool.length / n);
+    const batches = [];
+    for(let i = 0; i < pool.length; i += size) batches.push(pool.slice(i, i + size));
+    frame.progress(0, list.length, '0 / ' + list.length + ' كلمة');
+    frame.busy(passLabel + ': المساعد بيكتب ' + Math.max(pool.length, minQ) + ' سؤال صعب (' + batches.length + ' نداءات في نفس الوقت)');
+    await Promise.all(batches.map(async (batch, b) => {
       const got = await runBatch(batch, 'دفعة ' + (b + 1));
-      frame.idle();
       frame.log('دفعة ' + (b + 1) + ': ' + got + ' سؤال من ' + batch.length + ' كلمة');
       frame.progress(covered.size, list.length, covered.size + ' / ' + list.length + ' كلمة');
-      if(queue.length >= 50){ await verify(queue.splice(0, queue.length), ''); frame.progress(covered.size, list.length, covered.size + ' / ' + list.length + ' كلمة'); }
-    }
+    }));
+    frame.idle();
   };
 
   await doPass(list, 'توليد الأسئلة');
   if(queue.length && !frame.cancelled) await verify(queue.splice(0, queue.length), '');
   // تعويض الكلمات اللي ما خدتش سؤال (أو سؤالها اتشال) — مرة واحدة
   const missing = list.filter(w => !covered.has(w.id));
-  if(missing.length && !out.stopped && !frame.cancelled && rem() >= 2){
+  if(MZ_HARD_COMPENSATE && missing.length && !out.stopped && !frame.cancelled && rem() >= 2){
     frame.log('↻ بعوّض ' + missing.length + ' كلمة ناقصة');
     await doPass(missing, 'تعويض الكلمات الناقصة');
     if(queue.length) await verify(queue.splice(0, queue.length), '');
@@ -14554,7 +14560,7 @@ async function ensureQuizQuestions(unitId){
   const unitTitle = (u && u.title) || ('Unit ' + ((u && u.unit_number) || ''));
   const stageLabel = ((typeof STAGES !== 'undefined' ? STAGES : []).find(s => s.key === (u && u.stage_key)) || {}).label || (u && u.stage_key) || '';
   const frame = mzGenFrame('توليد أسئلة صعبة — ' + unitTitle);
-  frame.status('الوحدة مفيهاش أسئلة — بولّد أسئلة صعبة (' + MZ_HARD_BATCH + ' سؤال في نداء واحد) قبل ما أفتح الاختبار…');
+  frame.status('الوحدة مفيهاش أسئلة — بولّد أسئلة صعبة (' + MZ_HARD_BATCH + ' سؤال بالتوازي) قبل ما أفتح الاختبار…');
   let r;
   try{ r = await mzHardGenerate({ words, unitTitle, stageLabel, frame }); }
   catch(e){ console.error(e); r = { items: [], covered: 0, total: 0, error: (e && e.message) || 'خطأ غير متوقع' }; }
@@ -14582,7 +14588,7 @@ async function regenerateWordQuestions(){
   const unitTitle = unit.title || ('Unit ' + (unit.unit_number || ''));
   _hardGenBusy = true;
   const frame = mzGenFrame('توليد أسئلة صعبة — ' + unitTitle);
-  frame.status('بولّد أسئلة صعبة — ' + MZ_HARD_BATCH + ' سؤال في نداء واحد (' + Math.min(words.length, MZ_HARD_MAX_WORDS) + ' كلمة)…');
+  frame.status('بولّد أسئلة صعبة — ' + MZ_HARD_MAX_WORDS + ' سؤال بالتوازي (' + Math.min(words.length, MZ_HARD_MAX_WORDS) + ' كلمة)…');
   try{
     const r = await mzHardGenerate({ words, unitTitle, stageLabel, frame });
     if(!r.items.length){ frame.finish(false, 'ما اتولّدش أي سؤال — ' + (r.error || 'جرّب تاني')); return; }
