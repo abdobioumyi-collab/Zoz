@@ -14534,10 +14534,202 @@ const MZ_SIT = [
   ['life','cashier,pay,shop',"The --- gave me the receipt after I paid.",'cashier','pilot','farmer','judge'],
   ['life','breakfast',"I always --- breakfast before I go to school.",'have','drive','throw','climb'],
   ['life','guests,tidy,clean',"Before the guests arrived, we --- the living room.",'tidied','drank','sang','slept'],
-  ['life','alarm,wake,morning',"My --- rang at six o'clock, so I woke up.",'alarm','pencil','window','carpet']
+  ['life','alarm,wake,morning',"My --- rang at six o'clock, so I woke up.",'alarm','pencil','window','carpet'],
+  ['med','nurse,blood,pressure',"The nurse --- the patient's blood pressure and wrote it on his chart.",'measured','translated','borrowed','polished'],
+  ['med','surgeon,wound,stitches',"The surgeon --- the deep wound with stitches after the operation.",'closed','ironed','shaved','bargained'],
+  ['med','paramedic,bleeding,cut',"The paramedics --- the bleeding by pressing a clean cloth on the cut.",'stopped','caused','ignored','copied'],
+  ['med','medication,pill,grandfather',"My grandfather must take his --- every morning: one white pill and one yellow capsule.",'medication','vacation','invitation','education'],
+  ['med','contagious,infection,disease',"The doctor said the infection was ---, so the boy had to stay away from his classmates.",'contagious','delicious','generous','curious'],
+  ['med','scar,wound,deep',"The wound was so deep that the doctor warned it would leave a ---.",'scar','scarf','scale','scene'],
+  ['med','unconscious,accident,paramedic',"He was --- after the accident, so the paramedics could not wake him up.",'unconscious','unhappy','unfair','unusual'],
+  ['med','intensive,care,patient',"The patient is in --- care, so only the nurses may enter his room.",'intensive','expensive','impressive','extensive'],
+  ['med','anxious,worried,result',"My mum was --- about my test results, so she could not sleep.",'anxious','careless','harmless','tasteless'],
+  ['med','medical,check,employee',"The company gives every employee a free --- check once a year.",'medical','musical','magical','typical'],
+  ['med','pain,fade,medicine',"Fifteen minutes after he took the medicine, the pain began to ---.",'fade','fail','fold','fetch'],
+  ['med','sleeve,blood,nurse',"The nurse asked him to --- his sleeve so she could take his blood pressure.",'roll up','give up','set up','look up'],
+  ['med','smoking,doctor,advice',"After the doctor's advice, he decided to give --- smoking for good.",'up','in','off','out'],
+  ['med','stretcher,paramedic,ambulance',"The paramedics carefully lifted the injured driver onto a --- and carried him to the ambulance.",'stretcher','ladder','blanket','suitcase'],
+  ['med','cure,disease,scientist',"Scientists are working hard to find a --- for this dangerous disease.",'cure','curve','cause','court'],
+  ['med','heal,wound,weeks',"It took three weeks for the wound to ---.",'heal','heat','hide','hunt'],
+  ['med','swollen,ankle,ice',"His ankle was --- after the match, so the doctor told him to put ice on it.",'swollen','spoken','broken','stolen'],
+  ['med','rest,doctor,exhausted',"Because he was completely exhausted, the doctor ordered him to take a complete ---.",'rest','race','roof','rule'],
+  ['life','delay,traffic,exam',"The bus was --- because of the heavy traffic, so we missed the start of the exam.",'delayed','decorated','delivered','deleted'],
+  ['life','exhausted,journey,asleep',"She was so --- after the long journey that she fell asleep immediately.",'exhausted','embarrassed','enormous','elegant'],
+  ['life','manager,meeting,postpone',"The manager --- the meeting because half of the staff were ill.",'postponed','repaired','invented','scored'],
+  ['life','passenger,seat,fasten',"Passengers must --- their seat belts before the plane takes off.",'fasten','weaken','soften','sharpen'],
+  ['life','firefighter,fire,school',"The firefighters --- the fire before it reached the school.",'extinguished','exhausted','explored','exported'],
+  ['life','police,thief,arrest',"The police --- the thief near the market after a short chase.",'arrested','decorated','borrowed','invited'],
+  ['life','mistake,apologise,teacher',"He --- his mistake and apologised to his teacher.",'admitted','admired','adopted','advised'],
+  ['life','phone,battery,charge',"Don't forget to --- your phone before you leave; the battery is almost dead.",'charge','cancel','chew','charm'],
+  ['life','interview,manager,job',"After the interview, the manager --- him the job.",'offered','opened','observed','organised'],
+  ['life','cinema,ticket,show',"He booked two --- online for the eight o'clock show.",'tickets','rockets','pockets','jackets'],
+  ['life','cinema,film,audience',"The audience --- loudly when the hero finally defeated the villain.",'applauded','sneezed','boiled','melted'],
+  ['life','cinema,film,ending',"We were so --- by the film's ending that nobody said a word.",'shocked','shopped','shaped','sharpened'],
+  ['life','cinema,popcorn,seat',"We found our seats in the dark and quietly --- our popcorn until the film began.",'shared','shaved','shouted','shifted'],
+  ['life','library,silence,noise',"The librarian asked the students to keep ---, because others were studying.",'silent','silly','simple','single'],
+  ['life','shop,discount,sale',"The shop offered a 30% --- on all winter clothes this week.",'discount','district','distance','disease'],
+  ['life','flight,cancel,storm',"Our flight was --- because of the terrible storm, so we stayed at a hotel.",'cancelled','collected','connected','corrected'],
+  ['life','neighbour,noise,complain',"The neighbours --- about the loud music, so we turned it down.",'complained','explained','remained','obtained'],
+  ['life','lost,wallet,police',"He --- his wallet on the bus and reported it to the police.",'lost','locked','lifted','lighted'],
+  ['life','deadline,project,submit',"The students worked all night to --- their project before the deadline.",'submit','subtract','suppose','survive'],
+  ['life','traffic,driver,speed',"The driver was fined because he was driving above the speed ---.",'limit','lack','lift','link'],
+  ['life','wedding,guests,invite',"The family --- two hundred guests to the wedding party.",'invited','inspired','insisted','invented']
 ];
+/* بنك مواقف إضافي ضخم (بيشتغل أوفلاين وفوري) — الصيغة: المجال|كلمات مفتاحية|الجملة|الصح|غلط|غلط|غلط */
+const MZ_SIT_EXTRA = `
+life|pass,exam,revise|She revised all night because she wanted to --- the exam.|pass|paste|pause|pack
+life|summarise,teacher,paragraph|The teacher asked us to --- the main idea of the paragraph in one sentence.|summarise|decorate|borrow|punish
+life|suspended,cheat,school|He was --- from school for a week because he cheated in the exam.|suspended|suspected|supported|suggested
+life|break,rules,punish|Students who --- the school rules will be punished.|break|bake|bite|bury
+life|concentrate,homework,loud|I can't --- on my homework when the TV is so loud.|concentrate|celebrate|decorate|generate
+life|scholarship,fees,university|The scholarship will --- all her university fees for four years.|cover|cure|curl|cool
+life|determined,give up,problem|He is very ---; he never gives up even when the problem is difficult.|determined|decorated|deserted|depressed
+life|plane,fog,late|The plane took --- ten minutes late because of the fog.|off|out|up|on
+life|luggage,keep,airport|Please --- your luggage with you; don't leave it alone at the airport.|keep|kick|kill|knit
+life|guide,tour,history|The tour guide --- us around the old city and explained its history.|showed|sewed|shaved|shared
+life|restaurant,table,reserve|We --- a table at the restaurant for eight o'clock.|reserved|resigned|resisted|removed
+life|customs,suitcase,airport|The customs officer asked him to open his suitcase for ---.|inspection|inspiration|injection|instruction
+life|tourist,season,cheap|It's cheaper to travel off-season, when there are fewer ---.|tourists|tournaments|tutors|tulips
+life|exchange,jacket,size|The jacket was too small, so I --- it for a bigger size.|exchanged|excused|exploded|expected
+life|receipt,return,shirt|Keep the --- in case you want to return the shirt.|receipt|recipe|reception|recession
+life|bargain,shirts,price|It's a real ---! I bought two shirts for the price of one.|bargain|baggage|balance|bakery
+life|discount,shopkeeper,offer|The shopkeeper --- me a discount because I bought many things.|offered|offended|obeyed|opposed
+life|budget,afford,car|I can't afford this car; it's way beyond my ---.|budget|bucket|bullet|button
+life|backup,files,computer|Don't forget to --- your files before the computer crashes.|back up|back off|back out|back down
+life|video,buffering,watch|The video kept ---, so I couldn't watch it properly.|buffering|brushing|boiling|bouncing
+life|password,login,account|She forgot her --- so she couldn't log in to her account.|password|passport|passage|passenger
+life|update,app,version|The app asked me to --- to the latest version.|update|upset|uphold|upright
+life|crack,screen,phone|My phone screen --- when I dropped it on the floor.|cracked|crawled|crossed|crowded
+life|signal,network,mobile|The mobile network is weak here, so I can't get a ---.|signal|single|simple|silver
+life|referee,match,injured|The referee --- the match after the player was badly injured.|stopped|stuffed|stirred|stored
+life|improve,fitness,train|He trains hard every day to --- his fitness.|improve|impose|impress|import
+life|twist,knee,basketball|She --- her knee while playing basketball.|twisted|twinkled|tasted|trusted
+life|cheer,crowd,striker|The crowd --- loudly when the striker scored.|cheered|chewed|checked|chased
+life|sprain,ankle,walk|Sara --- her ankle so badly that she couldn't walk.|sprained|sprinted|sprayed|spread
+life|milk,smell,off|The milk smells strange; it must have gone ---.|off|over|under|in
+life|chef,onion,slice|The chef --- the onions into thin slices.|sliced|slipped|slid|slept
+life|handle,hands,food|Wash your hands before you --- food.|handle|hammer|hunger|happen
+life|diet,sugar,fried|She is on a --- so she avoids sugar and fried food.|diet|duty|dust|drum
+life|storm,match,cancel|The match was called --- because of the storm.|off|in|up|at
+life|pollution,factories,air|Factories should reduce --- to protect the air we breathe.|pollution|population|promotion|protection
+life|plastic,decompose,years|Plastic bags take hundreds of years to ---.|decompose|decorate|describe|deposit
+life|flood,rain,village|Heavy rain caused a --- in the village, and many houses went under water.|flood|flame|flock|float
+life|rising,temperature,ice|Scientists warn that the earth's temperature is ---, causing the ice to melt.|rising|raising|rinsing|rusting
+life|electrician,electricity,building|He works as an --- and fixes the electricity in our building.|electrician|economist|historian|musician
+life|journalist,news,newspaper|A --- is a person who writes news stories for a newspaper.|journalist|jeweller|janitor|judge
+life|cv,job,apply|She applied for the job and sent her --- to the company.|CV|CD|TV|PC
+life|promotion,boss,work|The boss was pleased with his work and gave him a ---.|promotion|pollution|production|profession
+life|unemployed,factory,closed|He has been --- since the factory closed last year.|unemployed|unequal|unlucky|unclear
+life|jump,joy,won|She --- with joy when she heard she had won the prize.|jumped|jammed|joked|joined
+life|embarrassed,laugh,mistake|He felt --- when everyone laughed at his mistake.|embarrassed|enormous|elegant|energetic
+life|proud,passed,hard|I'm really --- of you; you worked so hard and you passed!|proud|proof|prompt|pure
+life|generous,share,poor|She was very ---, so she shared everything she had with the poor.|generous|general|gentle|genius
+life|honest,lie,truth|He is so --- that he never lies, even when the truth hurts.|honest|humble|hungry|hasty
+life|along,cousin,age|My cousin and I are the same age, so we get --- very well.|along|across|over|round
+life|invite,party,birthday|Thank you for --- me to your birthday party.|inviting|inventing|inspiring|insisting
+life|babysit,brother,parents|She looked --- her little brother while her parents were at work.|after|down|out|up
+life|promise,kept,help|He --- his promise and came to help us, just as he had said.|kept|kicked|kissed|killed
+life|respect,elderly,seat|We should --- elderly people on the bus by giving them our seats.|respect|reject|resist|reflect
+life|stuck,traffic,late|I'm sorry I'm late; I was --- in traffic.|stuck|stack|stock|stuff
+life|baby,cry,mother|The baby kept crying, so his mother --- him gently in her arms.|rocked|robbed|rowed|rented
+life|punctual,late,never|He is never late; he is always ---.|punctual|punctured|pungent|puzzled
+life|switch,lights,electricity|Please switch --- the lights when you leave the room to save electricity.|off|on|up|in
+life|thief,window,sleeping|The thief --- through the window while we were sleeping.|climbed|clapped|clipped|closed
+life|suburb,quiet,outskirts|He lives in a quiet --- on the outskirts of the city.|suburb|surface|subject|summit
+life|bank,loan,shop|The bank --- him a loan to open his shop.|granted|grabbed|grinned|greeted
+life|park,car,garage|Dad --- the car in the garage for the night.|parked|packed|pasted|peeled
+life|sunscreen,skin,tourists|Tourists were asked to wear sun --- to protect their skin.|cream|crew|crowd|cross
+life|strict,fair,equally|The teacher was strict but fair; he --- everyone equally.|treated|trusted|traded|trapped
+life|favour,window,close|Please --- me a favour and close the window.|do|make|take|get
+life|complaint,hotel,noise|I'd like to --- a complaint about the noise in the hotel.|make|do|take|keep
+life|habit,break,late|The doctor said I should --- the habit of eating late at night.|break|brake|bring|bake
+life|retire,father,thirty|My father --- from his job last year after thirty years.|retired|returned|repaired|replied
+life|hire,babysitter,kids|She --- a babysitter to look after the kids while she was out.|hired|hurt|hunted|hugged
+life|power,cut,storm|There was a power --- during the storm, so we used candles.|cut|cat|cap|cup
+life|weight,swimming,daily|She --- a lot of weight after she started swimming daily.|lost|lent|lasted|leaned
+life|film,true,story|The film is based on a true ---.|story|storm|stove|stone
+life|actor,role,film|Who --- the main role in the new film?|played|planned|planted|pleased
+life|actor,audience,funny|The actor --- the audience with his funny performance.|entertained|entered|enjoyed|enclosed
+life|film,critics,reviews|The film got excellent --- from critics.|reviews|revenge|reserves|reasons
+life|film,sleep,boring|The film was so --- that I almost fell asleep.|boring|boiling|borrowing|booking
+med|doctor,warn,lift|The doctor --- him not to lift heavy things for a month.|warned|worried|wondered|wandered
+med|nurse,injection,cotton|The nurse --- the skin with cotton before the injection.|wiped|waved|whipped|wished
+med|complain,chest,x-ray|The patient --- of chest pain, so the doctor ordered an X-ray.|complained|competed|compared|completed
+med|germs,hands,spread|Washing your hands often helps --- the spread of germs.|prevent|present|pretend|preview
+med|breathe,inhale,doctor|The doctor asked him to --- deeply and hold his breath.|inhale|inherit|inform|insert
+med|allergic,penicillin,medicine|She was --- to penicillin, so the doctor gave her a different medicine.|allergic|athletic|artistic|aggressive
+med|blood,test,iron|The blood test --- that he had low iron.|revealed|rewarded|reminded|repaired
+med|therapy,accident,walk|After the accident, he needed physical --- to learn to walk again.|therapy|theory|theatre|thirst
+med|pharmacist,medicine,children|The pharmacist warned us to keep the medicine out of the --- of children.|reach|reason|record|rescue
+med|confidential,patient,information|Doctors must keep their patients' information ---.|confidential|continental|convenient|conventional
+med|discharge,hospital,weeks|The patient was --- from hospital after two weeks.|discharged|discovered|discussed|disguised
+med|dose,medicine,tablets|The --- of the medicine is two tablets after meals.|dose|dust|dive|door
+med|pain,stomach,rushed|He was rushed to the hospital with severe --- in his stomach.|pain|paint|pant|plant
+med|surgery,success,recovered|The surgery was a ---; the patient recovered completely.|success|suffer|supply|sugar
+med|smoking,lungs,damage|Smoking can --- serious damage to your lungs.|cause|cure|cut|cast
+med|nurse,baby,cot|The nurse --- the sleeping baby in the cot.|placed|plated|planted|planned
+med|recommend,rest,days|The doctor --- that the boy should rest for three days.|recommended|remembered|recorded|reminded
+med|faint,sugar,eaten|He fainted because he hadn't eaten all day and his blood sugar was too ---.|low|loud|lazy|lost
+med|nurse,drip,patient|The nurse --- the drip to the patient's arm and checked the speed.|connected|collected|corrected|conducted
+med|doctor,swelling,reduce|The doctor gave him a cream to --- the swelling in his knee.|reduce|reflect|remove|rescue
+med|nurse,patient,chart|The nurse --- the patient's temperature on the chart every two hours.|recorded|recycled|repeated|replaced
+med|dentist,filling,tooth|The dentist --- the decayed tooth and put in a filling.|treated|trusted|traded|trapped
+med|wound,infection,clean|If you don't clean the wound, it may get ---.|infected|informed|inspected|injected
+med|ambulance,siren,road|The ambulance sped through the traffic with its --- on.|siren|signal|screen|season
+med|nurse,patient,calm|The nurse --- the frightened child by talking to him softly.|calmed|called|carved|cheated
+`;
+MZ_SIT_EXTRA.split('\n').forEach(l => { const a = l.split('|'); if(a.length === 7 && a.every(x => x.trim())) MZ_SIT.push([a[0].trim(), a[1].trim(), a[2].trim(), a[3].trim(), a[4].trim(), a[5].trim(), a[6].trim()]); });
 const MZ_SIT_BY_KEY = {};
 MZ_SIT.forEach((e, i) => e[1].split(',').forEach(k => { k = k.trim(); (MZ_SIT_BY_KEY[k] = MZ_SIT_BY_KEY[k] || []).push(i); }));
+
+/* مواقف مناسبة للكلمة: مطابقة مباشرة، ولو مفيش بنجرّب أشكال الكلمة (s / es / ed / ing / y→ies) والكلمة المركبة */
+function mzSitFor(word){
+  const w = mzClean(word).toLowerCase(); if(!w) return [];
+  const forms = new Set([w]);
+  if(/ies$/.test(w)) forms.add(w.slice(0, -3) + 'y');
+  if(/ing$/.test(w)){ forms.add(w.slice(0, -3)); forms.add(w.slice(0, -3) + 'e'); }
+  if(/ed$/.test(w)){ forms.add(w.slice(0, -2)); forms.add(w.slice(0, -1)); }
+  if(/es$/.test(w)) forms.add(w.slice(0, -2));
+  if(/s$/.test(w)) forms.add(w.slice(0, -1));
+  forms.add(w + 's'); forms.add(w + 'ed'); forms.add(w + 'd'); forms.add(w + 'ing'); forms.add(w + 'es');
+  w.split(' ').forEach(x => { if(x.length >= 4) forms.add(x); });
+  const out = new Set();
+  forms.forEach(f => (MZ_SIT_BY_KEY[f] || []).forEach(i => out.add(i)));
+  return [...out];
+}
+/* بنك المواقف في Supabase (جدول situation_bank): بيتحمّل في الخلفية ويتخزّن في الجهاز، فالتوليد بعدها بيشتغل أوفلاين وفوري.
+   لو مفيش نت أو فشل التحميل، بنكمّل بالمواقف اللي جوه الملف + آخر نسخة متخزّنة. */
+function mzMergeSit(rows){
+  try{
+    const have = new Set(MZ_SIT.map(e => e[2]));
+    let n = 0;
+    (rows || []).forEach(r => {
+      if(!r || !r.sentence || have.has(r.sentence)) return;
+      const ch = [r.correct, r.wrong1, r.wrong2, r.wrong3];
+      if(ch.some(x => !x) || new Set(ch.map(x => String(x).toLowerCase())).size !== 4) return;
+      have.add(r.sentence); MZ_SIT.push([r.domain === 'med' ? 'med' : 'life', r.keys || '', r.sentence, ch[0], ch[1], ch[2], ch[3]]); n++;
+      String(r.keys || '').split(',').forEach(k => { k = k.trim(); if(k) (MZ_SIT_BY_KEY[k] = MZ_SIT_BY_KEY[k] || []).push(MZ_SIT.length - 1); });
+    });
+    return n;
+  }catch(e){ return 0; }
+}
+(function(){
+  try{ const c = JSON.parse(localStorage.getItem('mz_sit_cache') || 'null'); if(c && c.rows) mzMergeSit(c.rows); }catch(e){}
+  window.mzRefreshSitBank = function(){
+    try{
+      if(navigator.onLine === false || !window.fetch) return;
+      const U = 'https://lkjiwxysratfdqervppe.supabase.co/rest/v1/situation_bank?select=domain,keys,sentence,correct,wrong1,wrong2,wrong3&active=eq.true&limit=2000';
+      const K = 'sb_publishable_xl_WNLw-z53pU9D480-mJQ_mka8jVA-';
+      const ctl = window.AbortController ? new AbortController() : null;
+      const t = setTimeout(() => { try{ ctl && ctl.abort(); }catch(_){} }, 6000);
+      fetch(U, { headers: { apikey: K, Authorization: 'Bearer ' + K }, signal: ctl ? ctl.signal : undefined })
+        .then(r => r.ok ? r.json() : null)
+        .then(rows => { clearTimeout(t); if(Array.isArray(rows) && rows.length){ mzMergeSit(rows); try{ localStorage.setItem('mz_sit_cache', JSON.stringify({ t: Date.now(), rows })); }catch(_){} } })
+        .catch(() => {});
+    }catch(e){}
+  };
+  setTimeout(window.mzRefreshSitBank, 2500);
+})();
 
 function mzClean(w){ return String(w || '').replace(/\([^)]*\)/g, '').split('/')[0].replace(/\s+/g, ' ').trim(); }
 function mzPickDistractors(correct, pool){
@@ -14569,11 +14761,20 @@ function mzBlankQuestion(w, pool){
 function mzMeaningQuestion(w, pool, arPool){
   const word = mzClean(w.word_en), ar = String(w.word_ar || '').trim();
   if(!word || !ar) return null;
+  const cat = MZ_CAT_OF[word.toLowerCase()];
   if(Math.random() < 0.5){
     const others = shuffleArray(arPool.filter(a => a !== ar)).slice(0, 3);
     if(others.length === 3) return { q: 'What does «' + word + '» mean?', choices: [ar].concat(others), correct: 0, wid: w.id };
   }
-  return { q: 'What does «' + ar + '» mean?', choices: [word].concat(mzPickDistractors(word, pool)), correct: 0, wid: w.id };
+  // نفس النوع (زي جبهة ↔ forehead / collarbone / chest / shoulder) عشان تبقى أصعب
+  let dist = mzPickDistractors(word, pool);
+  if(cat){
+    const same = shuffleArray(MZ_CATS[cat].list.filter(x => x !== word.toLowerCase()));
+    const inPool = same.filter(x => pool.some(p => p.toLowerCase() === x));
+    dist = inPool.concat(same.filter(x => inPool.indexOf(x) < 0)).slice(0, 3);
+    if(dist.length < 3) dist = mzPickDistractors(word, pool);
+  }
+  return { q: 'What does «' + ar + '» mean?', choices: [word].concat(dist), correct: 0, wid: w.id };
 }
 /* أخطاء إملائية مؤلَّفة: قلب حرفين / حرف علة غلط / حرف زيادة أو ناقص */
 function mzMisspellings(word){
@@ -14653,8 +14854,11 @@ async function mzHardGenerateLocal({ words, frame, maxWords }){
   const arPool = [...new Set(words.map(w => String(w.word_ar || '').trim()).filter(a => a && a.indexOf('|') < 0 && a[0] !== '*'))];
   const seenQ = new Set(), covered = new Set(), usedSit = new Set();
   const cnt = { blank: 0, situation: 0, category: 0, notcat: 0, spell: 0, misspelled: 0, letter: 0, unscramble: 0, meaning: 0 };
+  const CAP_SPELL = 5, CAP_LETTER = 5;   // إملاء (كتابة صح/أيهم غلط/رتّب) = 5 بس، وكمّل الكلمة = 5 بس
   const add = (it, kind) => {
     if(!it) return false;
+    if((kind === 'spell' || kind === 'misspelled' || kind === 'unscramble') && (cnt.spell + cnt.misspelled + cnt.unscramble) >= CAP_SPELL) return false;
+    if(kind === 'letter' && cnt.letter >= CAP_LETTER) return false;
     const k = it.q.toLowerCase() + '|' + it.choices[0].toLowerCase();
     if(seenQ.has(k)) return false;
     seenQ.add(k); out.items.push(it); if(it.wid != null) covered.add(it.wid); cnt[kind]++;
@@ -14663,7 +14867,7 @@ async function mzHardGenerateLocal({ words, frame, maxWords }){
   const makers = {
     blank:      w => mzBlankQuestion(w, pool),
     situation:  w => {
-      const idxs = (MZ_SIT_BY_KEY[mzClean(w.word_en).toLowerCase()] || []).filter(i => !usedSit.has(i));
+      const idxs = mzSitFor(w.word_en).filter(i => !usedSit.has(i));
       if(!idxs.length) return null;
       const i = idxs[Math.floor(Math.random() * idxs.length)]; usedSit.add(i);
       const e = MZ_SIT[i];
@@ -14678,7 +14882,7 @@ async function mzHardGenerateLocal({ words, frame, maxWords }){
     meaning:    w => mzMeaningQuestion(w, pool, arPool)
   };
   // أوزان الأنواع (الإملاء بكل أنواعه حوالي نص الأسئلة) — الترتيب بيتغيّر عشوائي لكل كلمة
-  const WEIGHTS = { blank: 3, situation: 3, spell: 3, category: 1.5, notcat: 1.5, misspelled: 1.5, letter: 1.5, unscramble: 1.5, meaning: 1.5 };
+  const WEIGHTS = { blank: 3, situation: 9, spell: 0.7, category: 1.5, notcat: 1.5, misspelled: 0.5, letter: 0.7, unscramble: 0.3, meaning: 2 };
   const order = () => {
     const rest = Object.keys(WEIGHTS), res = [];
     while(rest.length){
@@ -14696,8 +14900,10 @@ async function mzHardGenerateLocal({ words, frame, maxWords }){
   ['nurse', 'doctor', 'patient', 'dentist', 'surgeon', 'pharmacist', 'technician'].forEach(x => medSet.add(x));
   if(pool.filter(p => medSet.has(p.toLowerCase())).length >= 2){
     const rest = MZ_SIT.map((e, i) => i).filter(i => MZ_SIT[i][0] === 'med' && !usedSit.has(i));
-    shuffleArray(rest).slice(0, 6).forEach(i => { usedSit.add(i); const e = MZ_SIT[i]; add({ q: e[2], choices: [e[3], e[4], e[5], e[6]], correct: 0, wid: null }, 'situation'); });
+    shuffleArray(rest).slice(0, 22).forEach(i => { usedSit.add(i); const e = MZ_SIT[i]; add({ q: e[2], choices: [e[3], e[4], e[5], e[6]], correct: 0, wid: null }, 'situation'); });
   }
+  // مواقف حياتية صعبة إضافية (أغلب الاختبار مواقف) — بتتاخد من البنك حتى لو الكلمة المفتاحية مش في الوحدة
+  shuffleArray(MZ_SIT.map((e, i) => i).filter(i => !usedSit.has(i) && MZ_SIT[i][0] === 'life')).slice(0, 18).forEach(i => { usedSit.add(i); const e = MZ_SIT[i]; add({ q: e[2], choices: [e[3], e[4], e[5], e[6]], correct: 0, wid: null }, 'situation'); });
   // لو الوحدة كلماتها قليلة: نكمّل بنوع تاني لنفس الكلمات لحد الحد الأدنى
   for(let pass = 0; pass < 4 && out.items.length < MZ_HARD_MIN_Q; pass++){
     for(const w of list){ if(out.items.length >= MZ_HARD_MIN_Q) break; for(const k of order()){ if(add(makers[k](w), k)) break; } }
