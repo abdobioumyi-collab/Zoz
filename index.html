@@ -18858,19 +18858,37 @@ function normHeading(h){ h=String(h||'').trim(); return h.startsWith('#')?h:'##'
    2) سطر زي "Day 1" أو "Part 2" لو الـ AI رجّعه ككلمة (من غير ترجمة) بنحوّله لعنوان.
    3) أي (n) / (adj) / (noun) / (اسم) / (صفة) جنب الكلمة بتتشال قبل الحفظ. */
 const MZ_RE_T1=/(^|[^a-z])(unit|chapter|module)(?![a-z])|^\s*(الوحدة|وحدة|يونت|يونِت|الفصل|فصل)/i;
-const MZ_RE_T2=/(^|[^a-z])(part|day|lesson)(?![a-z])|^\s*(اليوم|يوم|بارت|الجزء|جزء|الدرس|درس)/i;
+const MZ_RE_T2=/(^|[^a-z])(part|day|lesson)(?![a-z])|اليوم|^\s*(يوم|بارت|الجزء|جزء|الدرس|درس)/i;
 const MZ_RE_T3=/key\s*-?\s*(vocab|words?)|^\s*(vocab(ulary)?|keywords?)\s*$|^\s*(كلمات|مفردات)/i;
 const MZ_RE_TITLE_ONLY=/^\s*(?:(?:unit|chapter|module|part|day|lesson)\s*[:\-–]?\s*\d+\w?(?:\s*[-–:]\s*[\w\s]+)?|key\s*-?\s*(?:vocab(?:ulary)?|words?)|vocabulary|keywords?|(?:الوحدة|وحدة|اليوم|يوم|بارت|الجزء|الدرس)\s*\d+)\s*[:：]?\s*$/i;
+/* كتابة العناوين الإنجليزي بنسق Title Case: الكلمات المهمة كابيتال، وحروف الربط الصغيرة (and/of/in/on…) صغيرة،
+   والاختصارات (AI) زي ما هي، والعربي ما بيتغيرش (غير توحيد «الاول» ← «الأول»). نفس القاعدة اللي اتطبّقت على الداتا. */
+const MZ_MINOR=new Set(['a','an','the','and','or','of','in','on','at','to','for','with','by','from','as','but','nor','vs']);
+function mzTitleCase(txt){
+  txt=String(txt||'').replace(/(^|\s)الاول/g,'$1الأول').replace(/\s+/g,' ').trim();
+  let seg=true, seen=false;
+  return txt.split(' ').map(t=>{
+    if(!/[A-Za-z]/.test(t)){ if(/[):]$/.test(t)||/^[-–—]$/.test(t)) seg=true; return t; }
+    const out=t.split('-').map((pt,j)=>{
+      if(!/[A-Za-z]/.test(pt)) return pt;
+      if(/^[A-Z]{2,}[^a-z]*$/.test(pt)) return pt;
+      if(j===0&&seen&&!seg&&MZ_MINOR.has(pt.replace(/[^A-Za-z]/g,'').toLowerCase())) return pt.toLowerCase();
+      return pt.toLowerCase().replace(/[a-z]/,c=>c.toUpperCase());
+    }).join('-');
+    seen=true; seg=/[):]$/.test(t);
+    return out;
+  }).join(' ');
+}
 function mzSmartHeading(h){
-  const raw=String(h||'').trim(), m=raw.match(/^#+/), n=m?m[0].length:0;
-  const text=raw.replace(/^#+\s*/,'').trim();
+  const raw=String(h||'').trim(), m=raw.match(/^\s*#+/), n=m?m[0].replace(/\s/g,'').length:0;
+  const text=mzTitleCase(raw.replace(/^\s*#+\s*/,'').trim());
   if(!text) return raw;
   let lvl=0;
   if(MZ_RE_T1.test(text)) lvl=1;
   else if(MZ_RE_T2.test(text)) lvl=2;
   else if(MZ_RE_T3.test(text)) lvl=3;
-  if(!lvl) lvl=n?Math.min(n,3):2;
-  return '#'.repeat(lvl)+text;
+  if(!lvl) lvl=n?Math.min(n,3):3;
+  return '#'.repeat(lvl)+' '+text;
 }
 const MZ_POS_WORD='n|v|adj|adv|prep|conj|pron|interj|det|num|noun|verb|adjective|adverb|preposition|conjunction|pronoun|اسم|فعل|صفة|ظرف|حرف جر|حرف';
 const MZ_POS_RE=new RegExp('\\s*[\\(\\[（]\\s*(?:'+MZ_POS_WORD+')\\s*\\.?\\s*(?:[\\/,،&+]\\s*(?:'+MZ_POS_WORD+')\\s*\\.?\\s*)*[\\)\\]）]','gi');
@@ -18892,7 +18910,7 @@ async function addWords(unitId,ws){
   let n=data&&data.length?(data[0].order_index||0)+1:0;
   const rows=ws.map(w=>isStr(w.word_en)
     ? {unit_id:unitId,item_type:'word',word_en:w.word_en.trim(),word_ar:(w.word_ar||'').trim()||null,example_en:(w.example_en||'').trim()||null,example_ar:(w.example_ar||'').trim()||null,order_index:n++}
-    : {unit_id:unitId,item_type:'title',title_text:normHeading(w.heading),word_en:'',order_index:n++});
+    : {unit_id:unitId,item_type:'title',title_text:mzSmartHeading(w.heading),word_en:'',order_index:n++});
   // دفعات متوازية (10 في المرة) بدل واحدة ورا التانية — أسرع بكتير مع القوائم الطويلة
   for(let i=0;i<rows.length;i+=10) await Promise.all(rows.slice(i,i+10).map(r=>adminUpsertRow('words',r)));
   fetchWords(unitId,true).catch(()=>{});
