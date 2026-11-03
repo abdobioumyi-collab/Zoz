@@ -19285,7 +19285,7 @@ async function viaInvoke(ep,payload,dbg){
    متزايدة (backoff)، وبتحدّث نص "بيحاول تاني…" في الفقاعة عن طريق
    onStatus لو اتبعتت. لو الـ 3 محاولات كلها فشلت، وقتها بس بترمي
    الخطأ العادي. */
-const MZAI_RETRY_DELAYS_MS=[7000,18000]; // محاولتين إضافيتين: بعد 7 ثانية، وبعد 18 ثانية
+const MZAI_RETRY_DELAYS_MS=[8000,15000,25000,40000,60000]; // 5 محاولات إضافية (لو السيرفر قال استني X ثانية بنستخدم رقمه بدل ده)
 function mzaiIsBusyStatus(st){ return st===429||st===529||st===503; }
 async function mzaiSingleAttempt(ep,payload,dbg){
   const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),120000);
@@ -19303,7 +19303,7 @@ async function mzaiSingleAttempt(ep,payload,dbg){
   dbg.push('HTTP '+r.status,'الرد: '+String(raw).slice(0,400));
   if(!r.ok){
     const msg=(j&&(j.error||j.message))||String(raw).slice(0,200)||('HTTP '+r.status);
-    return {ok:false,status:r.status,msg,dbg};
+    return {ok:false,status:r.status,msg,dbg,ra:(j&&Number(j.retry_after))||0};
   }
   if(!j) throw mzErr('الرد مش بصيغة JSON','الدالة رجّعت: '+String(raw).slice(0,120),'راجعي كود الدالة.',dbg);
   return {ok:true,data:j};
@@ -19319,7 +19319,8 @@ async function callAI(payload,onStatus){
     lastFail=res;
     const canRetry=mzaiIsBusyStatus(res.status)&&attempt<MZAI_RETRY_DELAYS_MS.length;
     if(!canRetry) break;
-    const waitMs=MZAI_RETRY_DELAYS_MS[attempt];
+    if(res.ra>120) break; /* حصة يومية/طويلة خلصت — الانتظار مش هيفيد */
+    const waitMs=res.ra?Math.min(90000,Math.max(4000,res.ra*1000+1500)):MZAI_RETRY_DELAYS_MS[attempt];
     if(typeof onStatus==='function'){
       let left=Math.round(waitMs/1000);
       onStatus('الخدمة مزدحمة شوية، بحاول تاني خلال '+left+' ث…');
@@ -19336,33 +19337,43 @@ async function callAI(payload,onStatus){
 }
 /* ⭐ أكتر من صورة: كل صورة في طلب لوحدها (بالتوازي، 4 مرة واحدة) بدل ما الدالة تستنى كل الصور في طلب واحد وتعدّي 110 ثانية (504).
    بعدها بندمج النتايج بنفس ترتيب الصور. لو صورة فشلت، الخطأ بيقول رقمها بوضوح. */
+const mzPageCache=new Map(); // نتيجة كل صفحة خلصت — لو فيه صفحة فشلت وأعدتي الإرسال، اللي خلص ما بيتقراش تاني (توفير لحصة Gemini)
 async function callAIMulti(payload,onStatus){
   const imgsAll=Array.isArray(payload.images)?payload.images:[];
   if(imgsAll.length<2) return callAI(payload,onStatus);
-  const N=imgsAll.length, results=new Array(N);
-  let next=0, done=0, failed=null;
-  const base=String(payload.text||'');
+  const N=imgsAll.length, results=new Array(N), base=String(payload.text||'');
+  const keyOf=i=>{ const d=String((imgsAll[i]||{}).data||''); return base.length+'|'+d.length+'|'+d.slice(0,48)+'|'+d.slice(-48); };
+  let next=0, done=0; const failedIdx=[]; let firstErr=null;
   const note=i=>'\n\nملحوظة: دي صورة '+(i+1)+' من '+N+' صور متتالية (صفحات ورا بعض) في نفس الطلب — استخرجي محتوى الصورة المرفقة هنا بس، من غير ما تكرري أو تتخيلي محتوى صفحات تانية. '+
     (i===0?'ده أول جزء، فأي عنوان طلبته المشرفة من عندها (زي Part 1 مش ظاهر في الصورة) يتحط هنا.'
            :'ده مش أول جزء، فمتحطيش أي عنوان طلبته المشرفة من عندها (زي Part 1)، حطي بس العناوين الظاهرة فعلاً في الصورة دي.');
   /* متابعة لكل صفحة: ⏳ بتتقرا / ✅ تمت (عدد الكلمات) / ❌ فشلت — والوقت اللي عدى بيتحدّث كل ثانية */
-  const st=new Array(N).fill('⏳ بتتقرا…'), t0=Date.now();
+  const st=new Array(N).fill('⏳ مستنية دورها…'), t0=Date.now();
   const countOf=r=>{ let n=0; (Array.isArray(r&&r.actions)?r.actions:[]).forEach(a=>{ if(a&&a.type==='add_words') n+=(a.words||[]).filter(w=>w&&w.word_en).length; else if(a&&a.type==='add_paragraphs') n+=(a.paragraphs||[]).filter(p=>p&&p.text_en&&!String(p.text_en).trim().startsWith('#')).length; else if(a&&a.type==='add_questions') n+=(a.questions||[]).length; }); return n; };
   const report=()=>{ if(typeof onStatus!=='function') return;
     onStatus('📚 بقرأ '+N+' صفحات — خلصت '+done+' من '+N+' ('+Math.round((Date.now()-t0)/1000)+' ث)\n'+st.map((x,i)=>'صفحة '+(i+1)+': '+x).join('\n')); };
   const iv=setInterval(report,1000);
   async function worker(){
-    while(!failed){
+    while(true){
       const i=next++; if(i>=N) return;
+      const ck=keyOf(i);
+      if(mzPageCache.has(ck)){ results[i]=mzPageCache.get(ck); done++; const c=countOf(results[i]); st[i]='✅ تمت من قبل'+(c?' ('+c+')':''); report(); continue; }
+      st[i]='⏳ بتتقرا…'; report();
       try{
         results[i]=await callAI(Object.assign({},payload,{images:[imgsAll[i]],text:base+note(i)}),t=>{ st[i]=t?('⏳ '+t):'⏳ بتتقرا…'; report(); });
+        mzPageCache.set(ck,results[i]);
         done++; const c=countOf(results[i]); st[i]='✅ تمت'+(c?' ('+c+')':''); report();
-      }catch(e){ st[i]='❌ فشلت'; report(); if(!failed){ failed=e; try{ e.message='صفحة '+(i+1)+' من '+N+': '+(e.message||''); }catch(_){} } return; }
+      }catch(e){ st[i]='❌ فشلت'; failedIdx.push(i+1); if(!firstErr) firstErr=e; report(); }
     }
   }
   report();
-  try{ await Promise.all(Array.from({length:Math.min(4,N)},worker)); } finally { clearInterval(iv); }
-  if(failed) throw failed;
+  try{ await Promise.all(Array.from({length:1},worker)); /* صفحة واحدة في المرة: التوازي كان بيخنق حصة Gemini */ } finally { clearInterval(iv); }
+  if(failedIdx.length){
+    failedIdx.sort((x,y)=>x-y);
+    try{ firstErr.message='صفحة '+failedIdx.join('، ')+' فشلت — الصفحات اللي خلصت اتحفظت، اضغطي إرسال تاني وهكمل من عندها. '+(firstErr.message||''); }catch(_){}
+    throw firstErr;
+  }
+  for(let i=0;i<N;i++) mzPageCache.delete(keyOf(i));
   const merged=[], acc={}, F={add_words:'words',add_paragraphs:'paragraphs',add_questions:'questions'};
   results.forEach((r,ci)=>{
     (Array.isArray(r&&r.actions)?r.actions:[]).forEach(a=>{
