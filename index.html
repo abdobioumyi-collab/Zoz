@@ -19334,6 +19334,55 @@ async function callAI(payload,onStatus){
   const h=hintFor(lastFail.status,lastFail.msg);
   throw mzErr(h[0],'رسالة السيرفر: '+lastFail.msg+' (HTTP '+lastFail.status+', بعد '+(MZAI_RETRY_DELAYS_MS.length+1)+' محاولات)',h[1],lastFail.dbg);
 }
+/* ⭐ أكتر من صورة: كل صورة في طلب لوحدها (بالتوازي، 4 مرة واحدة) بدل ما الدالة تستنى كل الصور في طلب واحد وتعدّي 110 ثانية (504).
+   بعدها بندمج النتايج بنفس ترتيب الصور. لو صورة فشلت، الخطأ بيقول رقمها بوضوح. */
+async function callAIMulti(payload,onStatus){
+  const imgsAll=Array.isArray(payload.images)?payload.images:[];
+  if(imgsAll.length<2) return callAI(payload,onStatus);
+  const N=imgsAll.length, results=new Array(N);
+  let next=0, done=0, failed=null;
+  const base=String(payload.text||'');
+  const note=i=>'\n\nملحوظة: دي صورة '+(i+1)+' من '+N+' صور متتالية (صفحات ورا بعض) في نفس الطلب — استخرجي محتوى الصورة المرفقة هنا بس، من غير ما تكرري أو تتخيلي محتوى صفحات تانية. '+
+    (i===0?'ده أول جزء، فأي عنوان طلبته المشرفة من عندها (زي Part 1 مش ظاهر في الصورة) يتحط هنا.'
+           :'ده مش أول جزء، فمتحطيش أي عنوان طلبته المشرفة من عندها (زي Part 1)، حطي بس العناوين الظاهرة فعلاً في الصورة دي.');
+  /* متابعة لكل صفحة: ⏳ بتتقرا / ✅ تمت (عدد الكلمات) / ❌ فشلت — والوقت اللي عدى بيتحدّث كل ثانية */
+  const st=new Array(N).fill('⏳ بتتقرا…'), t0=Date.now();
+  const countOf=r=>{ let n=0; (Array.isArray(r&&r.actions)?r.actions:[]).forEach(a=>{ if(a&&a.type==='add_words') n+=(a.words||[]).filter(w=>w&&w.word_en).length; else if(a&&a.type==='add_paragraphs') n+=(a.paragraphs||[]).filter(p=>p&&p.text_en&&!String(p.text_en).trim().startsWith('#')).length; else if(a&&a.type==='add_questions') n+=(a.questions||[]).length; }); return n; };
+  const report=()=>{ if(typeof onStatus!=='function') return;
+    onStatus('📚 بقرأ '+N+' صفحات — خلصت '+done+' من '+N+' ('+Math.round((Date.now()-t0)/1000)+' ث)\n'+st.map((x,i)=>'صفحة '+(i+1)+': '+x).join('\n')); };
+  const iv=setInterval(report,1000);
+  async function worker(){
+    while(!failed){
+      const i=next++; if(i>=N) return;
+      try{
+        results[i]=await callAI(Object.assign({},payload,{images:[imgsAll[i]],text:base+note(i)}),t=>{ st[i]=t?('⏳ '+t):'⏳ بتتقرا…'; report(); });
+        done++; const c=countOf(results[i]); st[i]='✅ تمت'+(c?' ('+c+')':''); report();
+      }catch(e){ st[i]='❌ فشلت'; report(); if(!failed){ failed=e; try{ e.message='صفحة '+(i+1)+' من '+N+': '+(e.message||''); }catch(_){} } return; }
+    }
+  }
+  report();
+  try{ await Promise.all(Array.from({length:Math.min(4,N)},worker)); } finally { clearInterval(iv); }
+  if(failed) throw failed;
+  const merged=[], acc={}, F={add_words:'words',add_paragraphs:'paragraphs',add_questions:'questions'};
+  results.forEach((r,ci)=>{
+    (Array.isArray(r&&r.actions)?r.actions:[]).forEach(a=>{
+      if(!a||typeof a.type!=='string') return;
+      const f=F[a.type];
+      if(f){ if(!acc[a.type]){ acc[a.type]={type:a.type}; acc[a.type][f]=[]; merged.push(acc[a.type]); } if(Array.isArray(a[f])) acc[a.type][f].push(...a[f]); }
+      else if(ci===0) merged.push(a);
+    });
+  });
+  const nz=x=>String(x==null?'':x).trim().toLowerCase();
+  if(acc.add_words){ const out=[]; acc.add_words.words.forEach(w=>{ const q=out[out.length-1]; if(q&&w&&((w.heading&&q.heading&&nz(w.heading)===nz(q.heading))||(w.word_en&&q.word_en&&nz(w.word_en)===nz(q.word_en)))) return; out.push(w); }); acc.add_words.words=out; }
+  if(acc.add_paragraphs){ const out=[]; acc.add_paragraphs.paragraphs.forEach(p=>{ const q=out[out.length-1]; if(q&&p&&String(p.text_en||'').trim().startsWith('#')&&nz(p.text_en)===nz(q.text_en)) return; out.push(p); }); acc.add_paragraphs.paragraphs=out; }
+  const cnt=(t,f,pick)=>merged.filter(a=>a.type===t).reduce((n,a)=>n+(a[f]||[]).filter(pick).length,0);
+  const nW=cnt('add_words','words',w=>w&&w.word_en), nP=cnt('add_paragraphs','paragraphs',p=>p&&p.text_en&&!String(p.text_en).trim().startsWith('#')), nQ=cnt('add_questions','questions',q=>q&&q.question_text);
+  let reply;
+  if(nW||nP||nQ) reply='جهزت لك '+[nW?nW+' كلمة':'',nP?nP+' سطر براجراف':'',nQ?nQ+' سؤال':''].filter(Boolean).join(' و')+' من '+N+' صور بنفس الترتيب، راجعيهم واضغطي إضافة.';
+  else reply=results.map(r=>r&&r.reply).filter(Boolean).join('\n\n')||'معرفتش أفهم الطلب، وضّحيه أكتر.';
+  const warns=results.map(r=>r&&r.reply).filter(x=>x&&x.includes('⚠️')); if(warns.length) reply+='\n'+warns.join('\n');
+  return {reply,actions:merged};
+}
 /* جسر للمولّد الخارجي (توليد أسئلة الكلمات) — بيسمح بنداء نفس المساعد ونفس حدّ الاستخدام اليومي */
   window.mzaiBridge = { call: callAI, remaining: mzaiRemaining, bump: mzaiBumpUsed };
   /* وضع التشخيص الفني: مخفي عن الجميع افتراضياً، وبيتفعّل بس لو حطيتي ?mzdebug=1 في آخر رابط الصفحة
@@ -19495,7 +19544,7 @@ window.mzaiSend=async function(){
       const uSel=$('mzaiUnit').selectedOptions[0], sSel=$('mzaiStage').selectedOptions[0];
       const statsSnapshot = await buildStatsSnapshotForAI();
       const defaultAskText=sentImgs.length>1?'استخرجي كل النص والمحتوى من الصور دي (اعتبريهم صفحات متتالية) وجهزيه للإضافة في الوحدة المختارة.':'استخرجي كل النص والمحتوى من الصورة دي وجهزيه للإضافة في الوحدة المختارة.';
-      const j=await callAI({
+      const j=await callAIMulti({
         token:adminToken,
         text:typed||defaultAskText,
         images:sentImgs,
@@ -19503,7 +19552,7 @@ window.mzaiSend=async function(){
         stages:(typeof STAGES!=='undefined'?STAGES:[]).map(s=>({key:s.key,label:s.label})),
         all_stages:(typeof STAGES!=='undefined'?STAGES:[]).map(s=>({key:s.key,label:s.label})),
         stats:statsSnapshot
-      },(statusText)=>{ retryStatus=statusText||null; wLabel.textContent=statusText||(readingLabel+Math.round((Date.now()-t0)/1000)+' ث'); });
+      },(statusText)=>{ retryStatus=statusText||null; wLabel.style.display=statusText?'block':''; wLabel.style.whiteSpace=statusText?'pre-line':''; wLabel.textContent=statusText||(readingLabel+Math.round((Date.now()-t0)/1000)+' ث'); });
       mzaiBumpUsed(); // بنخصم المحاولة هنا بس — بعد ما الرد يرجع بنجاح فعلاً
       clearInterval(tick);
       if(sentImgs.length){ imgs=[]; $('mzaiFile').value=''; $('mzaiPrev').innerHTML=''; }
