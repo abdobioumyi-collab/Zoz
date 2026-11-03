@@ -1019,7 +1019,8 @@ input[type=range]::-moz-range-thumb:hover{transform:scale(1.16);}
   background:linear-gradient(135deg,var(--gold),var(--gold-deep));
   box-shadow:0 10px 24px color-mix(in srgb, var(--gold) 45%, transparent);
 }
-.lesson-title-bar.tier-2 span{font-weight:800;font-size:.9rem;color:var(--primary-deep);}
+.lesson-title-bar.tier-2{margin:12px 0 4px;}
+.lesson-title-bar.tier-2 span{font-weight:900;font-size:1.05rem;color:var(--primary-deep);padding:8px 24px;}
 .lesson-title-bar.tier-3{margin:2px 0 0;padding:4px 4px;}
 .lesson-title-bar.tier-3 span{
   font-size:.76rem;font-weight:600;color:var(--ink-soft);padding:4px 14px;
@@ -18848,6 +18849,44 @@ async function addQuestions(unitId,qs){
   fetchQuizQuestions(unitId,true).catch(()=>{});
 }
 function normHeading(h){ h=String(h||'').trim(); return h.startsWith('#')?h:'##'+h; }
+
+/* ---------- حراسة مخرجات المساعد الذكي (AI) ----------
+   1) مستوى العنوان بيتحدد من نص العنوان نفسه (مش من عدد # اللي الـ AI كتبه):
+        Unit / Chapter / وحدة / فصل          → #   (الأكبر والأميز)
+        Part / Day / Lesson / بارت / اليوم   → ##  (كبير)
+        Key vocabulary / Keywords / كلمات    → ### (صغير)
+   2) سطر زي "Day 1" أو "Part 2" لو الـ AI رجّعه ككلمة (من غير ترجمة) بنحوّله لعنوان.
+   3) أي (n) / (adj) / (noun) / (اسم) / (صفة) جنب الكلمة بتتشال قبل الحفظ. */
+const MZ_RE_T1=/(^|[^a-z])(unit|chapter|module)(?![a-z])|^\s*(الوحدة|وحدة|يونت|يونِت|الفصل|فصل)/i;
+const MZ_RE_T2=/(^|[^a-z])(part|day|lesson)(?![a-z])|^\s*(اليوم|يوم|بارت|الجزء|جزء|الدرس|درس)/i;
+const MZ_RE_T3=/key\s*-?\s*(vocab|words?)|^\s*(vocab(ulary)?|keywords?)\s*$|^\s*(كلمات|مفردات)/i;
+const MZ_RE_TITLE_ONLY=/^\s*(?:(?:unit|chapter|module|part|day|lesson)\s*[:\-–]?\s*\d+\w?(?:\s*[-–:]\s*[\w\s]+)?|key\s*-?\s*(?:vocab(?:ulary)?|words?)|vocabulary|keywords?|(?:الوحدة|وحدة|اليوم|يوم|بارت|الجزء|الدرس)\s*\d+)\s*[:：]?\s*$/i;
+function mzSmartHeading(h){
+  const raw=String(h||'').trim(), m=raw.match(/^#+/), n=m?m[0].length:0;
+  const text=raw.replace(/^#+\s*/,'').trim();
+  if(!text) return raw;
+  let lvl=0;
+  if(MZ_RE_T1.test(text)) lvl=1;
+  else if(MZ_RE_T2.test(text)) lvl=2;
+  else if(MZ_RE_T3.test(text)) lvl=3;
+  if(!lvl) lvl=n?Math.min(n,3):2;
+  return '#'.repeat(lvl)+text;
+}
+const MZ_POS_WORD='n|v|adj|adv|prep|conj|pron|interj|det|num|noun|verb|adjective|adverb|preposition|conjunction|pronoun|اسم|فعل|صفة|ظرف|حرف جر|حرف';
+const MZ_POS_RE=new RegExp('\\s*[\\(\\[（]\\s*(?:'+MZ_POS_WORD+')\\s*\\.?\\s*(?:[\\/,،&+]\\s*(?:'+MZ_POS_WORD+')\\s*\\.?\\s*)*[\\)\\]）]','gi');
+function mzStripPos(s){ return String(s==null?'':s).replace(MZ_POS_RE,'').replace(/\s{2,}/g,' ').trim(); }
+function mzCleanAiWords(ws){
+  return ws.map(w=>{
+    if(!w) return w;
+    if(isStr(w.heading)) return {heading:mzSmartHeading(w.heading)};
+    if(isStr(w.word_en)){
+      const en=mzStripPos(w.word_en);
+      if(MZ_RE_TITLE_ONLY.test(en)) return {heading:mzSmartHeading(en)};
+      return Object.assign({},w,{word_en:en,word_ar:mzStripPos(w.word_ar)});
+    }
+    return w;
+  }).filter(w=>w&&(isStr(w.word_en)||isStr(w.heading)));
+}
 async function addWords(unitId,ws){
   const {data}=await _supabase.from('words').select('order_index').eq('unit_id',unitId).order('order_index',{ascending:false}).limit(1);
   let n=data&&data.length?(data[0].order_index||0)+1:0;
@@ -18907,7 +18946,8 @@ async function renderAction(a){
       logAdminActivity('المساعد الذكي: إضافة أسئلة',p.questions.length+' في '+unitName);
     });
   }else if(a.type==='add_words'){
-    const ws=(Array.isArray(a.words)?a.words:[]).filter(w=>w&&(isStr(w.word_en)||isStr(w.heading))).slice(0,300);
+    let ws=(Array.isArray(a.words)?a.words:[]).filter(w=>w&&(isStr(w.word_en)||isStr(w.heading))).slice(0,300);
+    if(a._ai) ws=mzCleanAiWords(ws);
     const nW=ws.filter(w=>isStr(w.word_en)).length;
     if(!nW) return; if(!unitId) return log('⚠️ اختاري الوحدة الأول','bot');
     cardWithEdit('إضافة '+nW+' كلمة إلى «'+unitName+'»',ws.slice(0,5).map(w=>isStr(w.word_en)?esc(w.word_en)+' — '+esc(w.word_ar||''):'<b>'+esc(w.heading)+'</b>').join('<br>')+(ws.length>5?'<br>… و'+(ws.length-5)+' كمان':''),encodeWordsForEdit(ws),'words','إضافة الكلمات',async(p)=>{
@@ -18917,7 +18957,8 @@ async function renderAction(a){
       logAdminActivity('المساعد الذكي: إضافة كلمات',nFinal+' في '+unitName);
     });
   }else if(a.type==='add_paragraphs'){
-    const ps=(Array.isArray(a.paragraphs)?a.paragraphs:[]).filter(p=>p&&isStr(p.text_en)).slice(0,400);
+    let ps=(Array.isArray(a.paragraphs)?a.paragraphs:[]).filter(p=>p&&isStr(p.text_en)).slice(0,400);
+    if(a._ai) ps=ps.map(p=>p.text_en.trim().startsWith('#')?Object.assign({},p,{text_en:mzSmartHeading(p.text_en)}):p);
     const nP=ps.filter(p=>!p.text_en.trim().startsWith('#')).length;
     if(!ps.length) return; if(!unitId) return log('⚠️ اختاري الوحدة الأول','bot');
     cardWithEdit('إضافة '+nP+' سطر براجراف إلى «'+unitName+'»',ps.slice(0,3).map(p=>p.text_en.trim().startsWith('#')?'<b>'+esc(p.text_en)+'</b>':esc(p.text_en)+'<br><small>'+esc(p.text_ar||'')+'</small>').join('<br>')+(ps.length>3?'<br>… و'+(ps.length-3)+' كمان':''),encodeParagraphsForEdit(ps),'paragraphs','إضافة البراجراف',async(p)=>{
@@ -19177,8 +19218,8 @@ async function renderParsed(p,fromAI){
   if(nw) bits.push(nw+' كلمة'); if(np) bits.push(np+' سطر براجراف');
   log((fromAI?'🔎 لقيت الصيغة جوه النص المستخرج: ':'⚡ فهمت الصيغة مباشرة (من غير انتظار AI): ')+bits.join(' + ')+(p.skipped?'<br>⚠️ '+p.skipped+' سطر اتجاهلوا لأن صيغتهم ناقصة'+(p.kind==='quiz'?' (السؤال لازم يكون فيه سؤال + خيارين على الأقل + ⭐ قبل الإجابة الصحيحة)':'')+'.':'')+(p.kind==='words'||p.kind==='paragraphs'?'<br><small>لو مش ده المقصود، اكتبي كلمة «كلمات» أو «براجراف» في أول الرسالة.</small>':''),'bot');
   if(p.questions.length) await renderAction({type:'add_questions',questions:p.questions});
-  if(nw) await renderAction({type:'add_words',words:p.words});
-  if(np) await renderAction({type:'add_paragraphs',paragraphs:p.paragraphs});
+  if(nw) await renderAction({type:'add_words',words:p.words,_ai:!!fromAI});
+  if(np) await renderAction({type:'add_paragraphs',paragraphs:p.paragraphs,_ai:!!fromAI});
 }
 /* ---------- الاتصال بالدالة + تشخيص الأخطاء ---------- */
 function mzErr(title,cause,fix,dbg){ const e=new Error(title); e.mz={title,cause,fix,dbg:dbg||[]}; return e; }
@@ -19468,7 +19509,7 @@ window.mzaiSend=async function(){
       copyBtn=document.createElement('button'); copyBtn.type='button'; copyBtn.className='alt'; copyBtn.textContent='📋 نسخ الرسالة'; copyBtn.onclick=()=>copyText(reply,'✅ اتنسخت الرسالة','مقدرتش أنسخ'); w.appendChild(copyBtn);
       try{
         const acts=(Array.isArray(j.actions)?j.actions:[]).slice(0,8);
-        for(const a of acts) await renderAction(a||{});
+        for(const a of acts) await renderAction(Object.assign({},a||{},{_ai:true}));
         // شبكة أمان: لو الـ AI كتب النص بصيغتك في الرد بدل الكروت، نحوله لكروت
         if(!acts.length){ const p=parseFormat(reply); if(parsedTotal(p)&&reply.includes('|')) await renderParsed(p,true); }
       }catch(e2){ console.error(e2); log('⚠️ الرد وصل لكن مقدرتش أعرض الكارت: '+esc(e2.message),'bot'); }
