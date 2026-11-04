@@ -7516,15 +7516,99 @@ function renderRepeatCircles(){
   });
 }
 
+/* ===== ⚡ تجهيز النطق مسبقاً (v2) =====
+   السبب الحقيقي للتأخير: النطق بيتم بمحرك الموبايل نفسه (speechSynthesis)، والمحرك ده في الموبايلات
+   الضعيفة بياخد ٣–٦ ثواني يصحى أول مرة. التسخين القديم كان بيتلغي بنفسه لأن أول لمسة (اللي هي نفسها
+   ضغطة الكلمة) كانت بتعمل cancel للتسخين وتبدأ المحرك من الصفر. دلوقتي:
+   1) التسخين بيشتغل مع أول لمسة في أي حتة (وبيتكرر لو الموبايل رجع من الخلفية).
+   2) لو الضغطة جت والتسخين شغال، الكلمة بتستنى في طابور صغير وتنطق أول ما المحرك يجهز (من غير ما نلغي التسخين).
+   3) نبض صامت خفيف كل ٢٥ ثانية عشان المحرك ميرجعش ينام. */
+let _enVoice = null, _ttsWarm = false, _ttsWarming = false, _ttsLastCancel = 0, _ttsLastUse = 0;
+let _ttsQueue = [], _ttsWarmTimer = null;
+function _ttsPickVoice(){
+  try{
+    const v = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+    if(!v.length) return;
+    const us = x => /^en[-_]US$/i.test(x.lang);
+    _enVoice = v.find(x => us(x) && x.localService) || v.find(x => /^en/i.test(x.lang) && x.localService) || v.find(us) || v.find(x => /^en/i.test(x.lang)) || null;
+  }catch(_){}
+}
+function _ttsFlushQueue(){
+  const q = _ttsQueue; _ttsQueue = [];
+  q.forEach(u => { try{ _ttsLastUse = Date.now(); speechSynthesis.speak(u); }catch(_){} });
+}
+function _ttsWarmUp(force){
+  try{
+    if(!window.speechSynthesis || _ttsWarming) return;
+    if(_ttsWarm && force !== true) return;
+    _ttsPickVoice();
+    const u = new SpeechSynthesisUtterance('a');
+    u.volume = 0; u.rate = 2; u.lang = 'en-US'; if(_enVoice) u.voice = _enVoice;
+    _ttsWarming = true;
+    const done = (ok) => {
+      if(!_ttsWarming) return;
+      _ttsWarming = false; clearTimeout(_ttsWarmTimer);
+      if(ok) _ttsWarm = true;
+      _ttsFlushQueue();
+    };
+    u.onstart = () => done(true);                       // المحرك صحي وبدأ فعلاً
+    u.onend = () => done(true);
+    u.onerror = (e) => done(!(e && /not-allowed|interrupted|canceled/i.test(e.error || '')));
+    _ttsWarmTimer = setTimeout(() => done(false), 2500); // أمان: لو المحرك مبعتش أي حدث، متعطلش الضغطة أكتر من كده
+    _ttsLastUse = Date.now();
+    speechSynthesis.speak(u);
+  }catch(_){ _ttsWarming = false; }
+}
+function _ttsReset(){
+  try{
+    if(_ttsWarming){
+      // التسخين شغال: منلغيهوش، بس نفضّي الطابور (الضغطة الأحدث هي اللي تنطق)
+      const q = _ttsQueue; _ttsQueue = [];
+      q.forEach(u => { try{ u.onerror && u.onerror({ error:'canceled' }); }catch(_){} });
+      return;
+    }
+    const s = window.speechSynthesis; if(s.speaking || s.pending){ s.cancel(); _ttsLastCancel = Date.now(); }
+  }catch(_){}
+}
+function _ttsMake(text, lang, rate){
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang;
+  if(rate) u.rate = rate;
+  if(/^en/i.test(lang)){ if(!_enVoice) _ttsPickVoice(); if(_enVoice) u.voice = _enVoice; }
+  return u;
+}
+function _ttsGo(u){
+  if(_ttsWarming){ _ttsQueue.push(u); return; }   // المحرك لسه بيصحى: الكلمة تنطق أول ما يجهز
+  // بعد cancel المحرك بياخد لحظة، فلو نطقنا فوراً الصوت بيضيع (ده سبب إن أول ٣ ضغطات مبتنطقش)
+  _ttsLastUse = Date.now();
+  const wait = Math.max(0, 90 - (Date.now() - _ttsLastCancel));
+  if(wait > 0) setTimeout(() => { try{ speechSynthesis.speak(u); }catch(_){} }, wait);
+  else speechSynthesis.speak(u);
+}
+try{
+  if(window.speechSynthesis){
+    _ttsPickVoice();
+    speechSynthesis.addEventListener('voiceschanged', _ttsPickVoice);
+    ['pointerdown','touchstart','click','keydown'].forEach(ev => document.addEventListener(ev, () => _ttsWarmUp(), { passive:true, capture:true }));
+    document.addEventListener('visibilitychange', () => { if(!document.hidden){ _ttsWarm = false; _ttsPickVoice(); } });
+    // نبض صامت: يمنع المحرك من النوم في الموبايلات الضعيفة
+    setInterval(() => {
+      try{
+        if(document.hidden || !_ttsWarm || _ttsWarming) return;
+        const s = speechSynthesis;
+        if(s.speaking || s.pending || Date.now() - _ttsLastUse < 20000) return;
+        _ttsWarmUp(true);
+      }catch(_){}
+    }, 25000);
+  }
+}catch(_){}
+
 function speakEnglish(text, times, rateOverride){
   try{
-    window.speechSynthesis.cancel();
+    _ttsReset();
     const n = times || repeatCount;
     for(let i=0;i<n;i++){
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'en-US';
-      u.rate = rateOverride || ttsSpeed;
-      window.speechSynthesis.speak(u);
+      _ttsGo(_ttsMake(text, 'en-US', rateOverride || ttsSpeed));
     }
   }catch(e){ console.error(e); }
 }
@@ -7565,15 +7649,13 @@ async function playAllWords(listOverride){
 function speakAndWait(text, rate){
   return new Promise(resolve => {
     try{
-      window.speechSynthesis.cancel();
+      _ttsReset();
       let remaining = repeatCount;
       const speakOnce = () => {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'en-US';
-        u.rate = rate;
+        const u = _ttsMake(text, 'en-US', rate);
         u.onend = () => { remaining--; if(remaining > 0) speakOnce(); else resolve(); };
         u.onerror = () => resolve();
-        window.speechSynthesis.speak(u);
+        _ttsGo(u);
       };
       speakOnce();
     }catch(e){ resolve(); }
@@ -12485,15 +12567,13 @@ async function toggleParagraphsAccordion(){
 function speakParagraphLine(el, text, lang){
   if(!text) return;
   try{
-    window.speechSynthesis.cancel();
+    _ttsReset();
     document.querySelectorAll('.paragraph-line.playing, .word-card.playing').forEach(x => x.classList.remove('playing'));
     el.classList.add('playing');
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang;
-    u.rate = ttsSpeed;
+    const u = _ttsMake(text, lang, ttsSpeed);
     u.onend = () => el.classList.remove('playing');
     u.onerror = () => el.classList.remove('playing');
-    window.speechSynthesis.speak(u);
+    _ttsGo(u);
   }catch(e){ console.error(e); el.classList.remove('playing'); }
 }
 
