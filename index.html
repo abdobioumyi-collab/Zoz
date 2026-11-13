@@ -2898,6 +2898,7 @@ html.mz-dark .gm-res{background:rgba(30,24,50,.95)}
           <button class="admin-tab-btn" data-tab="notifs" onclick="switchAdminTab('notifs')">🔔 إشعارات الطلاب</button>
           <button class="admin-tab-btn" data-tab="honor" id="honorTabBtn" onclick="switchAdminTab('honor')">🏅 لوحة الشرف</button>
           <button class="admin-tab-btn" data-tab="gchat" id="gchatTabBtn" onclick="switchAdminTab('gchat')">💬 شات الصف</button>
+          <button class="admin-tab-btn" data-tab="feedback" id="fbTabBtn" onclick="switchAdminTab('feedback')">💡 الاقتراحات والمشكلات</button>
         </div></div>
         <div class="atg"><div class="atg-title">🎨 المظهر والمنصة</div><div class="atg-row">
           <button class="admin-tab-btn" data-tab="look" onclick="switchAdminTab('look')">🎨 المظهر</button>
@@ -3757,6 +3758,7 @@ He --- playing football. | *is | are | am | be"></textarea>
         </div>
       </div>
       <div class="admin-panel" id="panel-appstats"><div id="appStatsBody"><div class="spinner"></div></div></div>
+      <div class="admin-panel" id="panel-feedback"><div id="fbAdminBody"><div class="spinner"></div></div></div>
       <div class="admin-panel" id="panel-wordgame">
         <div style="margin-bottom:16px;padding:16px;border-radius:16px;border:2px dashed #7C4DFF;background:color-mix(in srgb, #7C4DFF 6%, transparent);">
           <label class="field-label" style="margin-top:0;">🎯 لعبة صائد الكلمات</label>
@@ -10039,6 +10041,7 @@ function switchAdminTab(tab){
   if(tab === 'sizes') renderStageSizeEditor();
   if(tab === 'levels') renderPointsLevelsEditor();
   if(tab === 'admins') renderAdminAdminsTab();
+  if(tab === 'feedback'){ try{ mzFbAdminLoad(); }catch(e){} }
 }
 
 /* ============================================================
@@ -25701,17 +25704,43 @@ html.mz-dark .cx-sec{--cx-ink:#F3ECFF;--cx-sub:#B7A8D6;--cx-v:#B79CFF;--cx-lil:r
 @media (prefers-reduced-motion:reduce){.cx-crown{opacity:1!important;transform:translateX(-50%) rotate(-6deg)!important;transition:none!important}.cx-bar i{transition:none!important}.cx-race .cx-bar i{width:var(--w)}}
 /* الشهادة (مصغّرة تحت البطل + مكبّرة في النافذة) */
 .ch-ov{position:fixed;inset:0;z-index:10090;background:rgba(15,5,25,.78);display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto;backdrop-filter:blur(4px)}
-.ch-cert{position:relative;width:100%;max-width:430px;margin:0 auto;border-radius:12px;padding:10px;background:linear-gradient(135deg,#F6D87A,#B9801C,#F6D87A);box-shadow:0 18px 44px rgba(0,0,0,.35);animation:chPop .5s both}
-.ch-ov .ch-cert{box-shadow:0 30px 70px rgba(0,0,0,.55)}
-.ch-cin{border-radius:6px;padding:24px 16px 18px;text-align:center;color:#3B2410;background:radial-gradient(circle at 50% 0%,#FFFBEA,#F6EAC6 70%);border:2px solid #B9801C;outline:6px double rgba(185,128,28,.45);outline-offset:-12px}
-.ch-cin .t{font-size:.7rem;letter-spacing:4px;font-weight:900;color:#8A5A12}
-.ch-cin h4{margin:6px 0 4px;font-size:1.45rem;font-weight:900;color:#5B2A5E}
-.ch-cin .s{font-size:.78rem;font-weight:800;color:#6B4A1E}
-.ch-cin .n{font-size:1.4rem;font-weight:900;line-height:1.6;margin:8px 0;color:#2A1640;border-bottom:2px solid #D9A22F;display:inline-block;padding:0 14px 2px}
-.ch-cin p{margin:8px 4px;font-size:.84rem;font-weight:800;line-height:2;color:#4A3318}
-.ch-cin p b{color:#8A5A12}
-.ch-cin .f{display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;font-size:.68rem;font-weight:800;color:#6B4A1E}
-.ch-seal{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:#fff;background:radial-gradient(circle,#E8B84A,#9C6A14);box-shadow:0 0 0 4px #F6D87A,0 6px 14px rgba(0,0,0,.3)}
+.ch-cert{position:relative;width:100%;max-width:410px;margin:0 auto;animation:chPop .5s both}
+.ch-ov .ch-cert{filter:drop-shadow(0 30px 60px rgba(0,0,0,.5))}
+.ch-cin{position:relative;overflow:hidden;border-radius:6px;padding:22px 22px 18px;text-align:center;color:#2E1A47;background:linear-gradient(160deg,#FFFFFF 0%,#F7F2FD 55%,#FFFFFF 100%);border:3px solid #D4AF37;font-family:Poppins,Cairo,sans-serif}
+.ch-cin::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(135deg,rgba(124,77,219,.05) 0 1.4px,transparent 1.4px 26px)}
+.ch-cn{position:absolute;width:78px;height:78px;pointer-events:none}
+.ch-cn.a{top:0;left:0;background:linear-gradient(135deg,#33146F,#8B5FBF);clip-path:polygon(0 0,100% 0,0 100%)}
+.ch-cn.b{bottom:0;right:0;background:linear-gradient(315deg,#33146F,#8B5FBF);clip-path:polygon(100% 100%,0 100%,100% 0)}
+.ch-dots{position:absolute;top:0;right:0;width:120px;height:100px;pointer-events:none;opacity:.35;background-image:radial-gradient(#5B2BB5 1.4px,transparent 1.6px);background-size:11px 11px;clip-path:polygon(0 0,100% 0,100% 100%)}
+.ch-cin>*:not(.ch-cn):not(.ch-dots){position:relative;z-index:1}
+.ch-ph{position:relative;width:200px;height:200px;margin:2px auto -6px}
+.ch-ph::before{content:"";position:absolute;inset:8% 6% 0;border-radius:50%;background:radial-gradient(circle,#E7DAFA 0%,rgba(231,218,250,0) 68%)}
+.ch-ph img{position:relative;width:100%;height:100%;object-fit:contain;object-position:center bottom;display:block;-webkit-mask-image:linear-gradient(#000 72%,transparent 100%);mask-image:linear-gradient(#000 72%,transparent 100%)}
+.ch-ph i{position:relative;display:flex;width:100%;height:100%;align-items:center;justify-content:center;font-style:normal;font-size:3.4rem;color:#8B5FBF}
+.ch-eb{font-size:.58rem;font-weight:700;letter-spacing:2px;color:#4F2E80;margin-top:4px}
+.ch-tn{margin:8px 0 0;font-size:1.28rem;font-weight:800;line-height:1.3;color:#2E1A47}
+.ch-bar{width:84px;height:4px;margin:9px auto 14px;border-radius:4px;background:linear-gradient(90deg,#2E1A47,#8B5FBF)}
+.ch-tag{display:inline-block;padding:7px 20px;border-radius:99px;font-size:.62rem;font-weight:600;color:#2E1A47;background:rgba(255,255,255,.7);border:1.5px solid rgba(46,26,71,.22)}
+.ch-ttl{margin:16px 0 0;font-family:'Aref Ruqaa','Cairo',serif;font-weight:700;font-size:1.9rem;line-height:1.5;color:#33146F}
+.ch-ttl2{font-size:.78rem;font-weight:800;letter-spacing:1.6px;color:#2E1A47;margin-top:2px}
+.ch-pa{margin:14px 0 0;font-size:.56rem;font-weight:700;letter-spacing:2px;color:#6E5C80}
+.ch-nm{display:inline-block;min-width:78%;margin:10px 0 0;padding:15px 22px;border-radius:18px;font-family:Cairo,Poppins,sans-serif;font-size:1.4rem;font-weight:900;line-height:1.4;color:#fff;background:#6B3FA0;border:2.5px solid #D4AF37}
+.ch-ds{margin:14px 6px 0;font-family:Cairo,sans-serif;font-size:.82rem;font-weight:600;line-height:2;color:#2E1A3D}
+.ch-ds b{color:#5B2BB5;font-weight:900}
+.ch-lv{margin-top:12px;font-size:.78rem;font-weight:800;letter-spacing:2px;color:#2E1A47}
+.ch-st{display:flex;justify-content:center;gap:0;margin:14px 0 2px;border-block:1px solid rgba(139,95,191,.3)}
+.ch-st>div{flex:1;padding:10px 4px}
+.ch-st>div+div{border-inline-start:1px solid rgba(139,95,191,.3)}
+.ch-st b{display:block;font-family:Cairo,sans-serif;font-size:1.35rem;font-weight:900;line-height:1.3;color:#5B2BB5}
+.ch-st span{font-family:Cairo,sans-serif;font-size:.68rem;font-weight:700;color:#6E5C80}
+.ch-id{direction:ltr;margin-top:10px;font-size:.56rem;font-weight:500;color:#9C8BAF}
+.ch-sg{direction:ltr;display:flex;justify-content:space-between;align-items:flex-end;margin-top:12px;padding:0 30px 10px}
+.ch-sg>div{flex:1 1 0;min-width:0;padding:0 4px}
+.ch-sig{font-family:'Dancing Script','Segoe Script',cursive;font-weight:700;font-size:1.05rem;line-height:1.2;color:#2E1A47;transform:rotate(-3deg);white-space:nowrap}
+.ch-sl{width:84px;height:3px;margin:6px auto;border-radius:3px;background:linear-gradient(90deg,#2E1A47,#8B5FBF)}
+.ch-sn{font-size:.62rem;font-weight:800;color:#2E1A47}
+.ch-sr{font-size:.44rem;font-weight:600;letter-spacing:1px;color:#9C8BAF;margin-top:2px}
+.ch-star{font-size:1.1rem;color:#D4AF37;line-height:1}
 .ch-x{position:absolute;top:-14px;right:-6px;width:34px;height:34px;border-radius:50%;border:0;background:#fff;color:#222;font-size:1rem;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.4);z-index:2}
 .ch-pick{display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow:auto;margin-top:10px}
 .ch-pick button{border:1px solid var(--line);background:var(--bg1);color:var(--ink);font-family:inherit;font-weight:800;font-size:.84rem;padding:11px 12px;border-radius:14px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;text-align:right}
@@ -25731,11 +25760,27 @@ function teacher(){try{return String(appSettings.teacher_name||'').trim()||'ال
 function pic(u){return u?'background-image:url('+esc(u)+')':'';}
 function ini(c){return c.photo_url?'':esc(String(c.name||'').trim().charAt(0)||'★');}
 function certHtml(c,inline){
+  var ml=esc(mLabel(c.month)), av='', ten='';
+  try{ av=appSettings.avatar_url||''; ten=(typeof sanitizeTeacherTitle==='function'?sanitizeTeacherTitle(appSettings.teacher_name_en||appSettings.teacher_name):(appSettings.teacher_name_en||appSettings.teacher_name))||''; }catch(e){}
+  ten=String(ten||'Mrs. Zienab Mohamed');
+  var mp=String(c.month).split('-'), ME=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var mEn=(ME[(+mp[1])-1]||'')+' '+mp[0];
   return '<div class="ch-cert">'+(inline?'':'<button class="ch-x" data-ch="close">✕</button>')+'<div class="ch-cin">'+
-  '<div class="t">✦ شهادة تقدير ✦</div><h4>بطل شهر '+esc(mLabel(c.month))+'</h4><div class="s">تُمنح هذه الشهادة إلى</div>'+
-  '<div class="n">'+esc(c.name)+'</div>'+
-  '<p>تقديرًا لتفوّقه وجهده، وحصوله على <b>المركز الأول</b> بين طلاب المنصة لشهر <b>'+esc(mLabel(c.month))+'</b> برصيد <b>'+ar(c.points)+'</b> نقطة، و<b>'+ar(c.days)+'</b> يوم مذاكرة، و<b>'+ar(c.certs)+'</b> شهادة.</p>'+
-  '<div class="f"><div>رقم الشهادة<br><b dir="ltr">'+esc(c.cert_no)+'</b></div><div class="ch-seal">★</div><div>'+esc(teacher())+'<br>إدارة المنصة</div></div></div></div>';
+  '<span class="ch-cn a"></span><span class="ch-cn b"></span><span class="ch-dots"></span>'+
+  '<div class="ch-ph">'+(av?'<img src="'+esc(av)+'" alt="">':'<i>★</i>')+'</div>'+
+  '<div class="ch-eb">✦ '+esc(ten.toUpperCase())+' ENGLISH PLATFORM ✦</div>'+
+  '<div class="ch-tn">'+esc(ten)+'</div><div class="ch-bar"></div>'+
+  '<div class="ch-tag">★ Champions are made one month at a time ★</div>'+
+  '<div class="ch-ttl">بطل شهر '+ml+'</div>'+
+  '<div class="ch-ttl2">MONTHLY CHAMPION · '+esc(mEn.toUpperCase())+'</div>'+
+  '<div class="ch-pa">THIS CERTIFICATE IS PROUDLY AWARDED TO</div>'+
+  '<div class="ch-nm">'+esc(c.name)+'</div>'+
+  '<div class="ch-ds">لأنه كسب لقب <b>بطل شهر '+ml+'</b> بحصوله على <b>المركز الأول</b> بين كل طلاب المنصة.</div>'+
+  '<div class="ch-st"><div><b>'+ar(c.points)+'</b><span>نقطة</span></div><div><b>'+ar(c.days)+'</b><span>يوم مذاكرة</span></div><div><b>'+ar(c.certs)+'</b><span>شهادة</span></div></div>'+
+  '<div class="ch-id">Certificate ID: <span dir="ltr">'+esc(c.cert_no)+'</span></div>'+
+  '<div class="ch-sg"><div><div class="ch-sig">'+esc(ten)+'</div><div class="ch-sl"></div><div class="ch-sn">'+esc(ten)+'</div><div class="ch-sr">COURSE INSTRUCTOR</div></div>'+
+  '<div><div class="ch-star">★</div><div class="ch-sl"></div><div class="ch-sn">Top of the Month</div><div class="ch-sr">ACHIEVEMENT LEVEL</div></div></div>'+
+  '</div></div>';
 }
 function open(html){var o=document.createElement('div');o.className='ch-ov';o.innerHTML=html;o.addEventListener('click',function(e){if(e.target===o||e.target.closest('[data-ch="close"]'))o.remove();});document.body.appendChild(o);return o;}
 function daysLeft(){var d=new Date(),e=new Date(d.getFullYear(),d.getMonth()+1,0);return e.getDate()-d.getDate()+1;}
@@ -28099,7 +28144,7 @@ function vwmInit(root){
         + '<div class="mz-sg-chips">' + CATS.map(function(c, i){ return '<button type="button" class="mz-sg-chip' + (i === 0 ? ' on' : '') + '" data-i="' + i + '">' + c[0] + ' ' + c[1] + '</button>'; }).join('') + '</div>'
         + '<textarea class="mz-sg-ta" id="mzSgTa" maxlength="400" placeholder="اكتب هنا…"></textarea>'
         + '<div class="mz-sg-cnt" id="mzSgCnt">0 / 400</div>'
-        + '<button type="button" class="mz-sg-go" id="mzSgGo" disabled><i class="fa-brands fa-whatsapp"></i> ابعت</button>'
+        + '<button type="button" class="mz-sg-go" id="mzSgGo" disabled><i class="fa-solid fa-paper-plane"></i> ابعت</button>'
         + '<button type="button" class="mz-sg-x" id="mzSgBack">رجوع</button>';
       $('mzSgBack').onclick = renderChoose;
       var ta = $('mzSgTa'), go = $('mzSgGo');
@@ -28107,16 +28152,20 @@ function vwmInit(root){
         ch.onclick = function(){ cat = +ch.getAttribute('data-i'); box.querySelectorAll('.mz-sg-chip').forEach(function(x){ x.classList.toggle('on', x === ch); }); };
       });
       ta.oninput = function(){ $('mzSgCnt').textContent = ta.value.length + ' / 400'; go.disabled = ta.value.trim().length < 5; };
-      go.onclick = function(){
+      go.onclick = async function(){
         var st = (typeof myStudent !== 'undefined' && myStudent) || {};
         var nm = st.student_name || st.name || '';
         var stage = ''; try{ var s = STAGES.find(function(x){ return x.key === (st.stage_key || (typeof currentStage !== 'undefined' ? currentStage : null)); }); stage = s ? s.label : ''; }catch(e){}
         var msg = (prob ? '🛠️ مشكلة في البرنامج' : '💡 اقتراح لتطوير البرنامج') + '\nالنوع: ' + CATS[cat][1] + '\n\n' + ta.value.trim() + (nm || stage ? '\n\n— ' + [nm, stage].filter(Boolean).join(' • ') : '');
-        var link = waLink(msg);
-        if(!link){ try{ showToast('الاقتراحات مش متاحة دلوقتي، جرّب بعدين'); }catch(e){} return; }
-        if(!/wa\.me\/[0-9]+\?text=/.test(link)){ try{ navigator.clipboard.writeText(msg); }catch(e){} }
-        window.open(link, '_blank', 'noopener');
-        box.innerHTML = '<div class="mz-sg-done"><i>💛</i><div class="mz-sg-h" style="justify-content:center">شكراً ليك</div><p class="mz-sg-p">كمّل إرسال الرسالة من واتساب، وهنقرأها.</p><button type="button" class="mz-sg-x" id="mzSgX2">تمام</button></div>';
+        go.disabled = true; go.textContent = 'جارِ الإرسال…';
+        var isAdm = false; try{ isAdm = !!isAdminUnlocked; }catch(e){}
+        var ok = false;
+        try{
+          var res = await _supabase.rpc('submit_app_feedback', { p_phone: st.phone || '', p_kind: prob ? 'problem' : 'idea', p_category: CATS[cat][1], p_body: ta.value.trim(), p_name: isAdm ? 'الإدارة' : nm, p_stage: stage, p_is_admin: isAdm });
+          ok = !res.error && res.data === true;
+        }catch(e){ ok = false; }
+        if(!ok){ go.disabled = false; go.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ابعت'; try{ showToast('ما اتبعتش، جرّب تاني بعد شوية'); }catch(e){} return; }
+        box.innerHTML = '<div class="mz-sg-done"><i>💛</i><div class="mz-sg-h" style="justify-content:center">وصل ' + (prob ? 'بلاغك' : 'اقتراحك') + '</div><p class="mz-sg-p">شكراً ليك، الإدارة هتقرأه.</p><button type="button" class="mz-sg-x" id="mzSgX2">تمام</button></div>';
         $('mzSgX2').onclick = close;
       };
     }
@@ -28228,6 +28277,64 @@ function vwmInit(root){
   }
   window.mzFabTest = { snapAll: snapAll, hideGroup: hideGroup, applyHidden: applyHidden };
   if(document.readyState === 'complete') init(); else window.addEventListener('load', init);
+})();
+</script>
+
+
+<script>
+/* ===== 💡 تبويب الإدارة: الاقتراحات والمشكلات ===== */
+var mzFbFilter = 'all';
+async function mzFbAdminLoad(){
+  var box = document.getElementById('fbAdminBody'); if(!box) return;
+  try{
+    var r = await _supabase.rpc('admin_list_app_feedback', { p_token: adminToken });
+    if(r.error) throw r.error;
+    mzFbRender(box, r.data || []);
+  }catch(e){ console.error(e); box.innerHTML = '<div class="empty-note">تعذّر التحميل</div>'; }
+}
+function mzFbRender(box, rows){
+  var esc = function(t){ return (typeof escapeHtml === 'function') ? escapeHtml(t == null ? '' : String(t)) : String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var newCount = rows.filter(function(x){ return x.status === 'new'; }).length;
+  var btn = document.getElementById('fbTabBtn');
+  if(btn){ btn.classList.toggle('has-alert', newCount > 0); if(newCount) btn.dataset.count = newCount; else delete btn.dataset.count; }
+  var list = rows.filter(function(x){ return mzFbFilter === 'all' ? true : (mzFbFilter === 'new' ? x.status === 'new' : x.kind === mzFbFilter); });
+  var chip = function(k, t){ return '<button type="button" class="mz-fb-chip' + (mzFbFilter === k ? ' on' : '') + '" onclick="mzFbFilter=\'' + k + '\';mzFbAdminLoad()">' + t + '</button>'; };
+  box.innerHTML = '<div class="mz-fb-chips">' + chip('all','الكل (' + rows.length + ')') + chip('new','جديد (' + newCount + ')') + chip('idea','💡 اقتراحات') + chip('problem','🛠️ مشكلات') + '</div>'
+    + (list.length ? list.map(function(f){
+      var prob = f.kind === 'problem', stg = ''; try{ stg = (STAGES.find(function(s){ return s.key === f.stage_key; }) || {}).label || ''; }catch(e){}
+      return '<div class="mz-fb-card' + (f.status === 'done' ? ' done' : '') + '">'
+        + '<div class="mz-fb-top"><span class="mz-fb-tag ' + (prob ? 'p' : 'i') + '">' + (prob ? '🛠️ مشكلة' : '💡 اقتراح') + (f.category ? ' · ' + esc(f.category) : '') + '</span>'
+        + '<span class="mz-fb-time">' + new Date(f.created_at).toLocaleString('ar-EG') + '</span></div>'
+        + '<div class="mz-fb-body">' + esc(f.body) + '</div>'
+        + '<div class="mz-fb-who">' + (f.is_admin ? '👤 الإدارة' : '🎓 ' + esc(f.student_name || 'طالب')) + (stg ? ' • ' + esc(stg) : '') + (f.student_phone ? ' • <span dir="ltr">' + esc(f.student_phone) + '</span>' : '') + '</div>'
+        + '<div class="mz-fb-act">'
+        + (f.status === 'done' ? '<button onclick="mzFbAct(\'' + f.id + '\',\'new\')">↩︎ رجّعه جديد</button>' : '<button class="ok" onclick="mzFbAct(\'' + f.id + '\',\'done\')">✅ تم</button>')
+        + '<button class="del" onclick="mzFbAct(\'' + f.id + '\',\'delete\')">حذف</button></div></div>';
+    }).join('') : '<div class="empty-note">مفيش حاجة هنا دلوقتي 🌸</div>');
+}
+async function mzFbAct(id, action){
+  if(action === 'delete' && !confirm('تأكيد الحذف؟')) return;
+  try{ await _supabase.rpc('admin_set_app_feedback', { p_token: adminToken, p_id: id, p_action: action }); }catch(e){ console.error(e); }
+  mzFbAdminLoad();
+}
+(function(){
+  var c = document.createElement('style');
+  c.textContent = '.mz-fb-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}'
+  + '.mz-fb-chip{border:1.5px solid var(--line);background:var(--glass-bg,transparent);color:var(--ink);font-family:inherit;font-weight:800;font-size:.78rem;padding:7px 13px;border-radius:999px;cursor:pointer}'
+  + '.mz-fb-chip.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--teal,#4FA69A),var(--teal-deep,#2E6B62))}'
+  + '.mz-fb-card{border:1.5px solid var(--line);border-radius:18px;padding:12px 14px;margin-bottom:10px;background:var(--card,#fff)}'
+  + '.mz-fb-card.done{opacity:.55}'
+  + '.mz-fb-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}'
+  + '.mz-fb-tag{font-size:.72rem;font-weight:900;padding:3px 10px;border-radius:999px}'
+  + '.mz-fb-tag.i{background:color-mix(in srgb,var(--gold,#D3A94E) 22%,transparent);color:var(--gold-deep,#A67F2E)}'
+  + '.mz-fb-tag.p{background:color-mix(in srgb,var(--danger,#d9534f) 16%,transparent);color:var(--danger,#d9534f)}'
+  + '.mz-fb-time{font-size:.66rem;color:var(--ink-soft);font-weight:700}'
+  + '.mz-fb-body{font-size:.88rem;font-weight:700;line-height:1.8;white-space:pre-wrap;word-break:break-word}'
+  + '.mz-fb-who{font-size:.7rem;color:var(--ink-soft);font-weight:800;margin-top:8px}'
+  + '.mz-fb-act{display:flex;gap:6px;margin-top:10px}'
+  + '.mz-fb-act button{border:0;cursor:pointer;font-family:inherit;font-weight:900;font-size:.74rem;padding:7px 14px;border-radius:12px;background:var(--glass-bg,#eee);color:var(--ink)}'
+  + '.mz-fb-act .ok{background:var(--teal,#4FA69A);color:#fff}.mz-fb-act .del{background:var(--danger,#d9534f);color:#fff}';
+  document.head.appendChild(c);
 })();
 </script>
 
