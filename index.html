@@ -25741,6 +25741,10 @@ html.mz-dark .cx-sec{--cx-ink:#F3ECFF;--cx-sub:#B7A8D6;--cx-v:#B79CFF;--cx-lil:r
 .ch-sn{font-size:.62rem;font-weight:800;color:#2E1A47}
 .ch-sr{font-size:.44rem;font-weight:600;letter-spacing:1px;color:#9C8BAF;margin-top:2px}
 .ch-star{font-size:1.1rem;color:#D4AF37;line-height:1}
+.ch-dl{display:flex;gap:8px;margin-top:12px;direction:rtl}
+.ch-dl button{flex:1;border:0;border-radius:14px;padding:12px 8px;font:900 .82rem Cairo,sans-serif;color:#fff;cursor:pointer;background:linear-gradient(135deg,#8F6BD1,#5B3A9E);box-shadow:0 8px 18px rgba(91,58,158,.35)}
+.ch-dl button.alt{background:#fff;color:#5B2BB5;border:1.5px solid #D4AF37;box-shadow:none}
+.ch-dl button:disabled{opacity:.6;cursor:wait}
 .ch-x{position:absolute;top:-14px;right:-6px;width:34px;height:34px;border-radius:50%;border:0;background:#fff;color:#222;font-size:1rem;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.4);z-index:2}
 .ch-pick{display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow:auto;margin-top:10px}
 .ch-pick button{border:1px solid var(--line);background:var(--bg1);color:var(--ink);font-family:inherit;font-weight:800;font-size:.84rem;padding:11px 12px;border-radius:14px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;text-align:right}
@@ -25759,6 +25763,51 @@ function tok(){try{return adminToken;}catch(e){return null;}}
 function teacher(){try{return String(appSettings.teacher_name||'').trim()||'المس';}catch(e){return 'المس';}}
 function pic(u){return u?'background-image:url('+esc(u)+')':'';}
 function ini(c){return c.photo_url?'':esc(String(c.name||'').trim().charAt(0)||'★');}
+function nn(x){return String(x||'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase();}
+function isOwner(c){try{return !!(myStudent&&myStudent.name&&c&&nn(myStudent.name)===nn(c.name));}catch(e){return false;}}
+function canDl(c){return isAdm()||isOwner(c);}
+function loadH2C(){
+  if(window.html2canvas)return Promise.resolve(true);
+  var urls=['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'];
+  var i=0;
+  return new Promise(function(res){
+    (function next(){
+      if(window.html2canvas)return res(true);
+      if(i>=urls.length)return res(false);
+      var sc=document.createElement('script');sc.src=urls[i++];
+      sc.onload=function(){res(!!window.html2canvas)};sc.onerror=next;document.head.appendChild(sc);
+    })();
+  });
+}
+async function snap(node){
+  async function go(noImg){
+    return await window.html2canvas(node,{scale:3,useCORS:true,backgroundColor:'#ffffff',logging:false,
+      onclone:function(d){
+        var n=d.querySelector('.ch-cert');if(n){n.style.animation='none';n.style.filter='none';n.style.opacity='1';n.style.transform='none';}
+        [].forEach.call(d.querySelectorAll('.ch-ph img'),function(im){im.style.webkitMaskImage='none';im.style.maskImage='none';if(noImg)im.remove();});
+      }});
+  }
+  var cv=await go(false);
+  try{cv.toDataURL('image/png');}catch(e){cv=await go(true);}
+  return cv;
+}
+async function dlCert(btn,fmt){
+  var ov=btn.closest('.ch-ov'),node=ov&&ov.querySelector('.ch-cin');if(!node)return;
+  var all=ov.querySelectorAll('.ch-dl button'),old=btn.textContent;
+  [].forEach.call(all,function(b){b.disabled=true;});btn.textContent='⏳ جاري التجهيز...';
+  try{
+    if(!(await loadH2C()))throw new Error('h2c');
+    var cv=await snap(node),base='champion-certificate-'+(ov.dataset.m||Date.now());
+    if(fmt==='png'){var a=document.createElement('a');a.download=base+'.png';a.href=cv.toDataURL('image/png');a.click();}
+    else{
+      var ok=true;try{if(typeof ensureJsPDF==='function')ok=await ensureJsPDF();else ok=!!(window.jspdf&&window.jspdf.jsPDF);}catch(e){ok=false;}
+      if(!ok||!window.jspdf)throw new Error('pdf');
+      var w=cv.width,h=cv.height,pdf=new window.jspdf.jsPDF({orientation:w>=h?'l':'p',unit:'px',format:[w,h]});
+      pdf.addImage(cv.toDataURL('image/jpeg',0.98),'JPEG',0,0,w,h);pdf.save(base+'.pdf');
+    }
+  }catch(e){console.error('champ cert dl',e);try{showToast('⚠️ مقدرتش أنزّل الشهادة، جرّبي تاني');}catch(_){}}
+  [].forEach.call(all,function(b){b.disabled=false;});btn.textContent=old;
+}
 function certHtml(c,inline){
   var ml=esc(mLabel(c.month)), av='', ten='';
   try{ av=appSettings.avatar_url||''; ten=(typeof sanitizeTeacherTitle==='function'?sanitizeTeacherTitle(appSettings.teacher_name_en||appSettings.teacher_name):(appSettings.teacher_name_en||appSettings.teacher_name))||''; }catch(e){}
@@ -25780,9 +25829,9 @@ function certHtml(c,inline){
   '<div class="ch-id">Certificate ID: <span dir="ltr">'+esc(c.cert_no)+'</span></div>'+
   '<div class="ch-sg"><div><div class="ch-sig">'+esc(ten)+'</div><div class="ch-sl"></div><div class="ch-sn">'+esc(ten)+'</div><div class="ch-sr">COURSE INSTRUCTOR</div></div>'+
   '<div><div class="ch-star">★</div><div class="ch-sl"></div><div class="ch-sn">Top of the Month</div><div class="ch-sr">ACHIEVEMENT LEVEL</div></div></div>'+
-  '</div></div>';
+  '</div>'+(!inline&&canDl(c)?'<div class="ch-dl"><button type="button" data-ch="dl" data-f="pdf">⬇️ تحميل PDF</button><button type="button" class="alt" data-ch="dl" data-f="png">🖼️ تحميل صورة</button></div>':'')+'</div>';
 }
-function open(html){var o=document.createElement('div');o.className='ch-ov';o.innerHTML=html;o.addEventListener('click',function(e){if(e.target===o||e.target.closest('[data-ch="close"]'))o.remove();});document.body.appendChild(o);return o;}
+function open(html){var o=document.createElement('div');o.className='ch-ov';o.innerHTML=html;o.addEventListener('click',function(e){var d=e.target.closest&&e.target.closest('[data-ch="dl"]');if(d){e.stopPropagation();dlCert(d,d.dataset.f);return;}if(e.target===o||e.target.closest('[data-ch="close"]'))o.remove();});document.body.appendChild(o);return o;}
 function daysLeft(){var d=new Date(),e=new Date(d.getFullYear(),d.getMonth()+1,0);return e.getDate()-d.getDate()+1;}
 var SV_CROWN='<svg class="cx-crown" viewBox="0 0 64 44" aria-hidden="true"><defs><linearGradient id="cxG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F9E6A0"/><stop offset="1" stop-color="#C08A1E"/></linearGradient></defs><path d="M5 36 11 10l12 14L32 5l9 19 12-14 6 26z" fill="url(#cxG)" stroke="#9A6B12" stroke-width="1.2" stroke-linejoin="round"/><rect x="5" y="36" width="54" height="5" rx="2" fill="url(#cxG)" stroke="#9A6B12" stroke-width="1.2"/><circle cx="11" cy="9" r="3" fill="#F6D87A"/><circle cx="32" cy="4" r="3.4" fill="#F6D87A"/><circle cx="53" cy="9" r="3" fill="#F6D87A"/></svg>';
 var SV_STAR='<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2l-6.1 3.4 1.4-6.8L2.2 9.1l6.9-.8z"/></svg>';
@@ -25836,7 +25885,7 @@ async function pickChamp(m){
 }
 document.addEventListener('click',function(e){
   var t=e.target.closest&&e.target.closest('#hsChampions [data-ch]');if(!t)return;
-  if(t.dataset.ch==='cert'){var c=CH.list[+t.dataset.i];if(c)open(certHtml(c,false));}
+  if(t.dataset.ch==='cert'){var c=CH.list[+t.dataset.i];if(c){var ov=open(certHtml(c,false));ov.dataset.m=String(c.month||'').slice(0,7);}}
   else if(t.dataset.ch==='pick'&&isAdm()&&tok())pickChamp(t.dataset.m);
 });
 function place(){
@@ -25860,6 +25909,127 @@ async function load(){
 }
 setInterval(function(){try{ensure();}catch(e){}},1500);
 setTimeout(load,1200);setInterval(function(){if(!document.hidden)load();},300000);
+})();
+</script>
+
+<!-- ===== 👑 وسام بطل الشهر: تاج جنب الاسم في الشات والبروفايل ولوحة الشرف ===== -->
+<style id="mzcCss">
+.mzc-b{display:inline-flex;align-items:center;gap:2px;margin-inline:5px;padding:1px 7px;border-radius:99px;font-size:.72rem;font-weight:900;line-height:1.55;color:#6B4300;background:linear-gradient(135deg,#FFF3C2,#E6B53F);border:1px solid #C89B3C;cursor:pointer;vertical-align:middle;white-space:nowrap;box-shadow:0 1px 4px rgba(200,155,60,.45);-webkit-tap-highlight-color:transparent}
+.mzc-b i{font-style:normal;font-size:.66rem}
+.mzc-b.now{animation:mzcGlow 2.4s ease-in-out infinite}
+@keyframes mzcGlow{0%,100%{box-shadow:0 0 0 0 rgba(230,181,63,.0),0 1px 4px rgba(200,155,60,.45)}50%{box-shadow:0 0 0 4px rgba(230,181,63,.28),0 1px 6px rgba(200,155,60,.6)}}
+@media (prefers-reduced-motion:reduce){.mzc-b.now{animation:none}}
+.mzc-shelf{text-align:center}
+.mzc-shelf h4{margin:0 0 8px}
+.mzc-med{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.mzc-med span{padding:6px 11px;border-radius:12px;font-size:.78rem;font-weight:800;color:#6B4300;background:linear-gradient(135deg,#FFF8DC,#F6DE95);border:1px solid #D9B04E}
+.mzc-med small{font-weight:700;opacity:.75;margin-inline-start:4px}
+.mzc-ov{position:fixed;inset:0;z-index:100010;background:rgba(15,5,25,.6);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl;font-family:'Cairo',sans-serif}
+.mzc-pop{width:100%;max-width:340px;background:var(--card,#fff);color:var(--ink,#2b2b2b);border-radius:22px;padding:20px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.mzc-pop h3{margin:6px 0 4px;font-size:1.05rem;font-weight:900}
+.mzc-pop p{margin:0 0 12px;font-size:.8rem;font-weight:700;opacity:.75}
+.mzc-pop button{margin-top:14px;width:100%;border:0;border-radius:14px;padding:11px;font:900 .88rem Cairo,sans-serif;color:#fff;background:linear-gradient(135deg,#8F6BD1,#5B3A9E);cursor:pointer}
+</style>
+<script>
+(function(){
+var MN=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+var M={by:{},names:{},latest:''};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function nn(x){return String(x||'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase();}
+function sh(n){return nn(n).split(' ').slice(0,2).join(' ');}
+function ml(m){var p=String(m).split('-');return (MN[(+p[1])-1]||'')+' '+p[0];}
+function info(phone,name){
+  var r=phone&&M.by[String(phone)];
+  if(!r&&name){r=M.names[nn(name)]||M.names[sh(name)];}
+  return r||null;
+}
+function badgeHtml(r){
+  var n=r.months.length,now=r.months[0].month===M.latest;
+  return '<span class="mzc-b'+(now?' now':'')+'" data-mzc="'+esc(r.phone)+'" role="button" title="بطل الشهر: '+esc(r.months.map(function(x){return ml(x.month);}).join('، '))+'">👑'+(n>1?'<i>×'+n+'</i>':'')+'</span>';
+}
+function addBadge(el,r,before){
+  if(!el||!r||el.querySelector(':scope > .mzc-b'))return;
+  var t=document.createElement('template');t.innerHTML=badgeHtml(r);
+  el.insertBefore(t.content.firstChild,before||null);
+}
+function shelfHtml(r){
+  return '<div class="pf-card mzc-shelf"><h4>👑 أوسمة أبطال الشهور</h4><div class="mzc-med">'+
+    r.months.map(function(x){return '<span>👑 '+esc(ml(x.month))+'<small>'+esc(x.points)+' نقطة</small></span>';}).join('')+'</div></div>';
+}
+function decChat(g){
+  if(!g||!g.dataset||g.classList.contains('admin-msg'))return;
+  var s=g.querySelector('.gchat-sender');if(!s)return;
+  var r=info(g.dataset.phone);if(!r)return;
+  addBadge(s,r,s.querySelector('.gc-lvchip'));
+}
+function decProfile(root,phone,name){
+  if(!root)return;
+  var r=info(phone,name);if(!r)return;
+  var nm=root.querySelector('.pf-name');
+  if(nm&&!nm.querySelector('.mzc-b')){var t=document.createElement('template');t.innerHTML=badgeHtml(r);nm.appendChild(t.content.firstChild);}
+  if(!root.querySelector('.mzc-shelf')){
+    var anchor=root.querySelector('.pf-stats')||root.querySelector('.pf-chips');
+    var t2=document.createElement('template');t2.innerHTML=shelfHtml(r);
+    if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(t2.content.firstChild,root.querySelector('.pf-stats')?anchor:anchor.nextSibling);
+  }
+}
+function decBoard(){
+  var b=document.getElementById('hxBoard');if(!b)return;
+  [].forEach.call(b.querySelectorAll('.hb-name'),function(el){
+    if(el.querySelector('.mzc-b'))return;
+    var r=info(null,el.textContent.replace(/👑.*$/,''));if(r)addBadge(el,r);
+  });
+  [].forEach.call(b.querySelectorAll('.hb-row > span[style*="flex:1"]'),function(el){
+    if(el.querySelector('.mzc-b'))return;
+    var n=el.firstChild&&el.firstChild.nodeType===3?el.firstChild.textContent:'';
+    var r=info(null,n);if(r)addBadge(el,r,el.firstChild.nextSibling);
+  });
+}
+function decAll(){
+  [].forEach.call(document.querySelectorAll('.gchat-group[data-phone]'),decChat);
+  decBoard();
+  var ov=document.querySelector('.pf-ov');
+  if(ov&&ov.dataset.mzcPh)decProfile(ov,ov.dataset.mzcPh);
+}
+/* ضغطة على التاج = نافذة صغيرة بكل الشهور اللي كسبها */
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('.mzc-b');if(!b)return;
+  e.stopPropagation();e.preventDefault();
+  var r=M.by[b.dataset.mzc];if(!r)return;
+  var o=document.createElement('div');o.className='mzc-ov';
+  o.innerHTML='<div class="mzc-pop"><div style="font-size:2.6rem">👑</div><h3>بطل الشهر'+(r.months.length>1?' — '+r.months.length+' مرات':'')+'</h3><p>أعلى نقاط على المنصة كلها في الشهر ده</p><div class="mzc-med">'+
+    r.months.map(function(x){return '<span>👑 '+esc(ml(x.month))+'<small>'+esc(x.points)+' نقطة</small></span>';}).join('')+'</div><button type="button">تمام</button></div>';
+  o.addEventListener('click',function(ev){if(ev.target===o||ev.target.tagName==='BUTTON')o.remove();});
+  document.body.appendChild(o);
+},true);
+/* ربط الأماكن اللي بتعرض الأسماء */
+try{ if(typeof gchatBuildGroup==='function'){var _g=gchatBuildGroup;gchatBuildGroup=function(){var g=_g.apply(this,arguments);try{decChat(g);}catch(e){}return g;};} }catch(e){}
+try{ if(typeof mzPeerCard==='function'){var _p=mzPeerCard;mzPeerCard=function(m){var r=_p.apply(this,arguments);try{decProfile(document.querySelector('.pf-mini'),m&&m.student_phone,m&&m.sender_name);}catch(e){}return r;};} }catch(e){}
+try{ if(typeof mzOpenProfile==='function'){var _o=mzOpenProfile;mzOpenProfile=async function(phone){
+  var ph=String(phone||'').trim();
+  var p=_o.apply(this,arguments);
+  var ov=document.querySelector('.pf-ov');if(ov)ov.dataset.mzcPh=ph;
+  var r=await p;try{decProfile(document.querySelector('.pf-ov'),ph);}catch(e){}return r;};} }catch(e){}
+try{ if(typeof gcAdminOpenProfile==='function'){var _a=gcAdminOpenProfile;gcAdminOpenProfile=async function(phone){
+  var r=await _a.apply(this,arguments);try{decProfile(document.querySelector('.pf-mini'),phone);}catch(e){}return r;};} }catch(e){}
+async function load(){
+  try{
+    var r=await _supabase.rpc('champion_badges');
+    if(r.error||!Array.isArray(r.data))return;
+    var by={},names={},latest='';
+    r.data.forEach(function(x){
+      if(!x||!x.phone||!x.months||!x.months.length)return;
+      by[String(x.phone)]=x;
+      names[nn(x.name)]=x;names[sh(x.name)]=x;
+      if(x.months[0].month>latest)latest=x.months[0].month;
+    });
+    M.by=by;M.names=names;M.latest=latest;
+    decAll();
+  }catch(e){}
+}
+setTimeout(load,1500);
+setInterval(function(){if(!document.hidden)load();},300000);
+setInterval(function(){try{decAll();}catch(e){}},1500);
 })();
 </script>
 
