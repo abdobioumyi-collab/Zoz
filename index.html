@@ -20741,6 +20741,7 @@ function gchatAppendBubble(groupEl, m, mine){
     if(m.image_url){
       html += gchatAdminMode ? `<img src="${m.image_url}" onclick="event.stopPropagation();gchatLightboxOpen('${m.image_url}')">` : `<img src="${m.image_url}" onclick="gchatLightboxOpen('${m.image_url}')">`;
       if(m.status === 'pending_review') html += '<div class="gchat-pending-flag"><i class="fa-solid fa-hourglass-half"></i> قيد المراجعة — هتظهر لباقي الصف بعد الموافقة</div>';
+      if(gchatAdminMode && m.status === 'pending_review') html += `<div class="gchat-inline-mod" style="display:flex;gap:8px;margin-top:8px;"><button type="button" style="flex:1;border:0;border-radius:10px;padding:8px;font-weight:800;color:#fff;background:var(--teal);" onclick="event.stopPropagation();gchatInlineModerate('${m.id}','approve',this)">✅ موافقة</button><button type="button" style="flex:1;border:0;border-radius:10px;padding:8px;font-weight:800;color:#fff;background:var(--danger);" onclick="event.stopPropagation();gchatInlineModerate('${m.id}','delete',this)">❌ رفض</button></div>`;
     }
   }
   if(gchatAdminMode && !deleted){
@@ -21590,6 +21591,25 @@ function gchatHandleRemoteDelete(id){
   if(i === -1) return;
   gchatMsgs.splice(i, 1);
   if(gchatPanelIsOpen) gchatRenderAll(true);
+}
+/* موافقة/رفض صورة معلّقة من جوه الشات نفسه (للأدمن) */
+async function gchatInlineModerate(id, action, btn){
+  if(action === 'delete' && !confirm('رفض الصورة وحذفها؟')) return;
+  const box = btn && btn.closest('.gchat-inline-mod');
+  if(box) box.querySelectorAll('button').forEach(b => b.disabled = true);
+  try{
+    const { data: ok, error } = await _supabase.rpc('admin_chat_moderate', { p_token: adminToken, p_message_id: id, p_action: action });
+    if(error) throw error;
+    if(ok !== true) throw new Error('no-permission');
+    const bub = document.querySelector('.gchat-bubble[data-id="'+id+'"]');
+    if(bub){
+      bub.classList.remove('pending');
+      const fl = bub.querySelector('.gchat-pending-flag'); if(fl) fl.remove();
+      if(box) box.remove();
+      if(action === 'delete'){ bub.innerHTML = '<i class="fa-solid fa-ban"></i> تم حذف هذه الرسالة'; bub.classList.add('deleted'); }
+    }
+    showToast(action === 'approve' ? '✅ الصورة ظهرت للطلاب' : '🗑️ اتحذفت');
+  }catch(e){ console.error(e); if(box) box.querySelectorAll('button').forEach(b => b.disabled = false); showToast('❌ حصلت مشكلة'); }
 }
 async function gchatAdminModerate(id, action){
   if(action === 'delete' && !confirm('تأكيد حذف الرسالة نهائيًا؟')) return;
