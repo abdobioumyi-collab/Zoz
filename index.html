@@ -251,12 +251,29 @@ window.mzViewApply();
 <meta name="theme-color" content="#5B2BB5">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Poppins:wght@500;600;700;800;900&family=Dancing+Script:wght@600;700&family=Aref+Ruqaa:wght@400;700&family=Cormorant+Garamond:ital,wght@1,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Poppins:wght@500;600;700;800;900&family=Dancing+Script:wght@600;700&family=Aref+Ruqaa:wght@400;700&family=Cormorant+Garamond:ital,wght@1,600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Poppins:wght@500;600;700;800;900&family=Dancing+Script:wght@600;700&family=Aref+Ruqaa:wght@400;700&family=Cormorant+Garamond:ital,wght@1,600&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+<style id="mz-splash-css">
+#mzSplash{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.28);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);pointer-events:none;transition:opacity .25s,visibility .25s}
+html.mz-dark #mzSplash{background:rgba(20,10,35,.3)}
+#mzSplash i{width:26px;height:26px;border-radius:50%;border:3px solid rgba(91,43,181,.25);border-top-color:#5B2BB5;animation:mzSpin .7s linear infinite}
+@keyframes mzSpin{to{transform:rotate(360deg)}}
+#mzSplash.out{opacity:0;visibility:hidden}
+/* قاعة الأبطال: متظهرش غير بعد ما بياناتها تتحمّل فعلاً */
+#hsChampions:empty{display:none!important}
+</style>
+<script>
+/* تحميل مكتبة ثقيلة عند الحاجة بس (مش في أول فتح التطبيق) */
+(function(){var c={};window.mzLoadScript=function(u){return c[u]||(c[u]=new Promise(function(res,rej){var s=document.createElement('script');s.src=u;s.onload=function(){res(true)};s.onerror=function(){delete c[u];rej(new Error('load '+u))};document.head.appendChild(s)}))};})();
+/* شاشة البدء: تختفي أول ما التطبيق يجهز، أو بحد أقصى 3 ثواني مهما كان النت */
+window.mzHideSplash=function(){var s=document.getElementById('mzSplash');if(!s||s.__h)return;s.__h=1;s.classList.add('out');setTimeout(function(){try{s.remove()}catch(e){}},400)};
+setTimeout(window.mzHideSplash,1000);
+</script>
+
+
+
 <script id="mz-apilog">
 /* يسجّل أي طلب لـ Supabase رجّع خطأ من السيرفر (404/400/500...) —
    زي دالة ناقصة في القاعدة أو صلاحية غلط — بدون ما يلمس الرد نفسه. */
@@ -2530,6 +2547,7 @@ html.mz-dark .gm-res{background:rgba(30,24,50,.95)}
 <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+<div id="mzSplash"><i></i></div>
 <script>try{ if(localStorage.getItem('mz_night_mode') === '1') document.documentElement.classList.add('mz-dark'); }catch(e){}</script>
 <div class="glow-orb o1"></div>
 <div class="glow-orb o2"></div>
@@ -4103,6 +4121,7 @@ He --- playing football. | *is | are | am | be"></textarea>
 
 <div class="toast" id="toastMsg"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="document.write('<script src=&quot;https://unpkg.com/@supabase/supabase-js@2&quot;><\/script>')"></script>
 <script>
 /* ============================================================
    CONFIG
@@ -6332,7 +6351,7 @@ function initAllRangeFills(){
   document.querySelectorAll('input[type=range]').forEach(updateRangeFill);
 }
 
-window.onload = async () => {
+window.__mzBoot = async () => {
   // ---- Recognize a remembered admin device, before anything else ----
   // If this browser previously logged into the admin panel successfully,
   // it holds a real server-issued session token (see tryAdminLogin /
@@ -6386,6 +6405,7 @@ window.onload = async () => {
   applySettingsToUI();
   renderStageGrid();
   renderRepeatCircles();
+  try{ window.mzHideSplash(); }catch(e){}
   try{ renderVoiceBtns(); }catch(e){}
   await restoreStudentSession();
   mzContinueRowSync();
@@ -6417,6 +6437,11 @@ window.onload = async () => {
   if(isAdminUnlocked) setTimeout(maybeShowDailyBrief, 600);
   startSettingsPolling();
 };
+(function(){
+  var go=function(){ if(window.__mzBooted) return; window.__mzBooted=true;
+    Promise.resolve().then(function(){ return window.__mzBoot(); }).catch(function(e){ console.error(e); }).then(function(){ window.mzHideSplash(); }); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else go();
+})();
 
 /* ============================================================
    LIVE SETTINGS SYNC — checks for admin changes every 5s so an
@@ -8661,7 +8686,7 @@ async function submitPaymentRequest(){
     // device-transfer flow (needs admin approval) since there's a real,
     // paid/approved account to protect here.
     const { data: existing } = await _supabase.from('students').select('*').eq('phone', phone).maybeSingle();
-    if(existing && existing.status === 'active' && !isMyDevice(existing)){
+    if(existing && existing.status === 'active' && (!isMyDevice(existing) || !existing.device_token)){
       showDeviceTransferConfirm(existing, name);
       return;
     }
@@ -8739,6 +8764,10 @@ async function submitPaymentRequest(){
     console.error(e);
     const em = String((e && (e.message || e.details)) || '');
     if(em.indexOf('ALREADY_ACTIVE') > -1){
+      try{
+        const { data: ex } = await _supabase.from('students').select('*').eq('phone', phone).maybeSingle();
+        if(ex && ex.status === 'active'){ showDeviceTransferConfirm(ex, name); return; }
+      }catch(_){}
       errEl.innerText = 'الرقم ده مفعّل بالفعل — لو بتدخلي من جهاز جديد اطلبي نقل الحساب أو كلّمي المس.';
     } else if(em.indexOf('DUPLICATE_PHONE') > -1){
       errEl.innerText = 'الرقم ده مسجّل قبل كده (بنفس الرقم بصيغة تانية). لو ده رقمك، كلّمي المس عشان تنقلي حسابك بدل ما تسجّلي من جديد.';
@@ -13894,6 +13923,7 @@ function loadScriptOnce(src){
 async function ensureJsPDF(){
   if(window.jspdf && window.jspdf.jsPDF) return true;
   const mirrors = [
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
     'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
     'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'
   ];
@@ -19913,7 +19943,9 @@ $('mzaiFile').onchange=e=>{ setImages(e.target.files); };
 /* ---------- ملفات PDF / Word / نص: بنستخرج النص وبنحطه في صندوق الكتابة عشان تراجعيه قبل الإرسال ---------- */
 (function(){ function f(){ if(window.pdfjsLib){ try{ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }catch(_){} } } if(window.pdfjsLib) f(); else window.addEventListener('DOMContentLoaded', f); })();
 async function extractPdfText(file){
+  if(!window.pdfjsLib){ try{ await mzLoadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'); }catch(_){} }
   if(!window.pdfjsLib) throw new Error('مكتبة قراءة الـ PDF متحملتش، جربي تحدّثي الصفحة.');
+  try{ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }catch(_){}
   const buf=await file.arrayBuffer();
   const doc=await pdfjsLib.getDocument({data:buf}).promise;
   let text='';
@@ -19925,6 +19957,7 @@ async function extractPdfText(file){
   return text.trim();
 }
 async function extractDocxText(file){
+  if(!window.mammoth){ try{ await mzLoadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js'); }catch(_){} }
   if(!window.mammoth) throw new Error('مكتبة قراءة ملفات Word متحملتش، جربي تحدّثي الصفحة.');
   const buf=await file.arrayBuffer();
   const r=await mammoth.extractRawText({arrayBuffer:buf});
@@ -25752,7 +25785,7 @@ html.mz-dark .cx-sec{--cx-ink:#F3ECFF;--cx-sub:#B7A8D6;--cx-v:#B79CFF;--cx-lil:r
 <script>
 (function(){
 var MN=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-var CH={list:[],race:[],key:''};
+var CH={list:[],race:[],key:'',ok:false};
 function $(i){return document.getElementById(i);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function ar(n){return String(n==null?'':n);}
@@ -25842,7 +25875,7 @@ function reveal(el){
   io.observe(el);
 }
 function render(){
-  var box=$('hsChampions');if(!box)return;
+  var box=$('hsChampions');if(!box||!CH.ok)return;
   var L=CH.list,R=CH.race,adm=isAdm();
   var key=JSON.stringify([L,R,adm,teacher()]);if(key===CH.key)return;CH.key=key;
   var cur=MN[new Date().getMonth()],h='';
@@ -25902,7 +25935,7 @@ function ensure(){
 async function load(){
   try{
     var a=await _supabase.rpc('champions_public_list'),b=await _supabase.rpc('get_honor_board',{p_limit:3});
-    if(a.data&&a.data.ok)CH.list=a.data.champions||[];
+    if(a.data&&a.data.ok){CH.list=a.data.champions||[];CH.ok=true;}
     if(Array.isArray(b.data))CH.race=b.data;
     render();
   }catch(e){}
